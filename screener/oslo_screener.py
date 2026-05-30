@@ -128,6 +128,17 @@ class YahooOsloScreener:
         log.info("Verdiscreening: %d av %d kandidater passerte.", len(passed), len(stocks))
         return passed
 
+    def fetch_news(self, stocks: list[StockData]) -> list[StockData]:
+        """Henter nyheter kun for aksjer som har passert verdifiltrering."""
+        for sd in stocks:
+            try:
+                news_raw = yf.Ticker(f"{sd.ticker}.OL").news
+                sd.news = _parse_news_items(news_raw)
+            except Exception:
+                pass
+            time.sleep(0.2)
+        return stocks
+
     def run(self, thresholds: dict, min_price: float = 5.0,
             max_price: float = 200.0,
             extra_tickers: list[str] | None = None) -> list[StockData]:
@@ -138,7 +149,8 @@ class YahooOsloScreener:
         if not candidates:
             return []
         stocks = self.fetch_fundamentals(candidates)
-        return self.apply_value_filter(stocks, thresholds)
+        passed = self.apply_value_filter(stocks, thresholds)
+        return self.fetch_news(passed)
 
 
 def _nn(val) -> Optional[float]:
@@ -147,3 +159,29 @@ def _nn(val) -> Optional[float]:
         return f if f == f and f != 0.0 else None
     except (TypeError, ValueError):
         return None
+
+
+def _parse_news_items(news_list) -> list[dict]:
+    """Parser yfinance-nyheter – støtter gammelt og nytt format."""
+    result = []
+    for n in (news_list or []):
+        content = n.get("content") if isinstance(n.get("content"), dict) else None
+        if content:
+            title = content.get("title", "")
+            canonical = content.get("canonicalUrl") or {}
+            url = canonical.get("url", "") or content.get("url", "") or n.get("link", "")
+            pub = content.get("pubDate", "")
+            try:
+                from datetime import datetime
+                ts = int(datetime.fromisoformat(pub.replace("Z", "+00:00")).timestamp())
+            except Exception:
+                ts = 0
+        else:
+            title = n.get("title", "")
+            url = n.get("link", "")
+            ts = n.get("providerPublishTime", 0)
+        if title:
+            result.append({"headline": title, "url": url, "datetime": ts, "summary": ""})
+        if len(result) == 10:
+            break
+    return result

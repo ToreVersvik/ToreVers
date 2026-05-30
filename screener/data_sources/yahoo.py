@@ -67,12 +67,7 @@ class YahooDataSource(DataSource):
             elif rec == "hold":
                 sd.analyst_rating = "Hold"
 
-            # Nyheter
-            sd.news = [
-                {"headline": n.get("title", ""), "url": n.get("link", ""),
-                 "datetime": n.get("providerPublishTime", 0), "summary": ""}
-                for n in (t.news or [])[:10]
-            ]
+            sd.news = _parse_news_items(t.news)
         except Exception as exc:
             log.warning("Yahoo-feil for %s: %s", sym, exc)
             sd.fetch_error = str(exc)
@@ -107,6 +102,35 @@ class YahooDataSource(DataSource):
                 pass
             results.append(sd)
         return results
+
+
+def _parse_news_items(news_list) -> list[dict]:
+    """Parser yfinance-nyheter – støtter gammelt og nytt format."""
+    result = []
+    for n in (news_list or []):
+        # Nytt format (yfinance ≥ 0.2.50): nyheten er pakket i et "content"-objekt
+        content = n.get("content") if isinstance(n.get("content"), dict) else None
+        if content:
+            title = content.get("title", "")
+            canonical = content.get("canonicalUrl") or {}
+            url = canonical.get("url", "") or content.get("url", "") or n.get("link", "")
+            pub = content.get("pubDate", "")
+            try:
+                from datetime import datetime
+                ts = int(datetime.fromisoformat(pub.replace("Z", "+00:00")).timestamp())
+            except Exception:
+                ts = 0
+        else:
+            # Gammelt format
+            title = n.get("title", "")
+            url = n.get("link", "")
+            ts = n.get("providerPublishTime", 0)
+
+        if title:
+            result.append({"headline": title, "url": url, "datetime": ts, "summary": ""})
+        if len(result) == 10:
+            break
+    return result
 
 
 def _nn(val) -> Optional[float]:
