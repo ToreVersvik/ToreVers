@@ -1,8 +1,9 @@
 name: Ukentlig aksjerapport
 
 on:
+  # Søndag kl 18:00 UTC = 19:00/20:00 norsk tid
   schedule:
-    - cron: "0 18 * * 0"   # Søndag kl 18:00 UTC ≈ 20:00 norsk tid
+    - cron: "0 18 * * 0"
   workflow_dispatch:
 
 jobs:
@@ -25,7 +26,6 @@ jobs:
 
       - name: Kjør ukentlig rapport
         env:
-          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}

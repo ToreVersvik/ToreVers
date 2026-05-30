@@ -2,7 +2,6 @@
 Ukentlig kjøring – full rapport med 3 seksjoner.
 
 Env som kreves:
-  FINNHUB_API_KEY
   ANTHROPIC_API_KEY
   TELEGRAM_BOT_TOKEN    (valgfri – konsoll-fallback)
   TELEGRAM_CHAT_ID      (valgfri)
@@ -24,35 +23,28 @@ CONFIG_PATH = pathlib.Path("config.json")
 
 
 def load_data_source(config: dict):
-    from screener.data_sources.finnhub import FinnhubDataSource
+    from screener.data_sources.yahoo import YahooDataSource
     from screener.data_sources.manual import ManualDataSource, FallbackDataSource
 
     manual_map = {
         s["ticker"]: s.get("manual_data", {})
         for s in config.get("portfolio", [])
     }
-    try:
-        primary = FinnhubDataSource()
-    except EnvironmentError as e:
-        log.warning("%s – faller tilbake til kun manuell data.", e)
-        return ManualDataSource(manual_map)
-
-    return FallbackDataSource(primary=primary, secondary=ManualDataSource(manual_map))
+    return FallbackDataSource(primary=YahooDataSource(), secondary=ManualDataSource(manual_map))
 
 
 def load_watchlist(config: dict) -> list:
+    """
+    Dynamisk watchlist: screener hele Oslo Børs 5–200 NOK hvis aktivert.
+    Bruker Yahoo Finance – ingen API-nøkkel nødvendig.
+    """
     dyn = config.get("dynamic_watchlist", {})
     if not dyn.get("enabled", False):
         log.info("Dynamisk watchlist deaktivert – bruker fast watchlist.")
         return []
 
-    api_key = os.environ.get("FINNHUB_API_KEY", "")
-    if not api_key:
-        log.warning("FINNHUB_API_KEY ikke satt – kan ikke kjøre dynamisk Oslo-screener.")
-        return []
-
-    from screener.oslo_screener import OsloScreener
-    screener = OsloScreener(api_key=api_key)
+    from screener.oslo_screener import YahooOsloScreener
+    screener = YahooOsloScreener()
 
     min_p = dyn.get("min_price_nok", 5.0)
     max_p = dyn.get("max_price_nok", 200.0)
@@ -73,7 +65,7 @@ def main() -> int:
         return 1
 
     # Sjekk at nødvendige secrets er satt
-    for key in ("FINNHUB_API_KEY", "ANTHROPIC_API_KEY"):
+    for key in ("ANTHROPIC_API_KEY",):
         val = os.environ.get(key, "")
         if val:
             log.info("%s: satt (%d tegn)", key, len(val))

@@ -1,96 +1,97 @@
 """
-Dynamisk screener for hele Oslo Børs.
+Dynamisk screener for Oslo Børs via Yahoo Finance.
+Ingen API-nøkkel nødvendig. Fungerer fra GitHub Actions.
 """
 import logging
 import time
 from typing import Optional
 
-import requests
+import yfinance as yf
+import pandas as pd
 
 from .data_sources.base import StockData
 
 log = logging.getLogger(__name__)
 
-_BASE = "https://finnhub.io/api/v1"
-_RATE_SLEEP = 0.22
+# Kjente Oslo Børs-tickers (kan utvides i config)
+_OSLO_TICKERS = [
+    "EQNR","DNB","MOWI","ORK","TEL","NHY","SALM","YARA","AKRBP","STB",
+    "GJF","SRBNK","SCATC","NONG","BAKKA","SUBC","TOM","PGS","BOR","KOG",
+    "HAUTO","FRO","GOGL","BULKERS","VAR","BNOR","SPNO","AKER","AKSO",
+    "ARCHER","AMSC","BWO","ELKEM","ENTRA","EUROPRIS","MPCC","NEXT",
+    "SATS","XXL","ZAL","MHG","REC","AGAS","BELSHIPS","FLNG","HOG",
+    "IDEX","KAHOOT","NEL","NORBIT","NORCOD","OHT","PHO","PLCS",
+    "REACH","SCR","SOLON","VEI","WILH","CRAYN","LINK","MAGNORA",
+    "THIN","VISTIN","SVEG","PROTCT","ODL","SMARTC","JIN","HOEGH",
+    "LUMI","SOFF","SIOFF","MPC","OKEA","PARB","QEC","RIVR","SDRL",
+    "SHELF","SHF","SHIP","SHLF","SOFF","SPAR","SRBANK","STRO","SUBC",
+    "BWE","CADLR","CLOUD","COMROD","FKRAFT","KIT","KROHN","MEDIC",
+    "NAK","NORDIC","NYKD","OTEC","PEN","PNOR","SAGA","SBO","SCH",
+    "SGR","SKUE","SMART","SNSA","SOFTOX","SWA","TNOR","TOTG","TRQ",
+    "TWOL","ULTI","VOSS","WILS","HMONY","FLYR","AUTOSTORE",
+]
 
 
-class OsloScreener:
-    def __init__(self, api_key: str):
-        self._key = api_key
+class YahooOsloScreener:
 
-    def _get(self, path: str, params: dict):
-        params["token"] = self._key
+    def fetch_prices(self, tickers_ol: list[str],
+                     min_price: float, max_price: float) -> list[dict]:
+        """Batch-hent kurs for alle tickers, returner de i prisintervallet."""
+        log.info("Batch-henter kurs for %d Oslo Børs-tickers…", len(tickers_ol))
         try:
-            r = requests.get(f"{_BASE}{path}", params=params, timeout=15)
-            r.raise_for_status()
-            return r.json()
+            raw = yf.download(
+                tickers_ol,
+                period="2d",
+                auto_adjust=True,
+                progress=False,
+                threads=True,
+            )
+            close = raw["Close"] if "Close" in raw else raw.get("close", pd.DataFrame())
         except Exception as exc:
-            log.warning("Finnhub-feil (%s): %s", path, exc)
-            return None
-
-    def fetch_all_symbols(self) -> list[dict]:
-        log.info("Henter symboler fra Oslo Børs…")
-        data = self._get("/stock/symbol", {"exchange": "OS"})
-        time.sleep(_RATE_SLEEP)
-        if not data or not isinstance(data, list):
-            log.error("Fikk ingen symboler fra Finnhub for Oslo Børs.")
+            log.error("yf.download feilet: %s", exc)
             return []
-        log.info("Fant %d symboler totalt.", len(data))
-        return data
 
-    def fetch_quotes(self, symbols: list[dict], min_price: float, max_price: float) -> list[dict]:
-        log.info("Henter kurs for %d symboler (filter %.0f–%.0f NOK)…",
-                 len(symbols), min_price, max_price)
         candidates = []
-        for i, sym in enumerate(symbols):
-            ticker = sym.get("symbol", "")
-            if not ticker:
+        for sym in tickers_ol:
+            try:
+                col = close[sym] if sym in close.columns else None
+                if col is None or col.dropna().empty:
+                    continue
+                price = float(col.dropna().iloc[-1])
+                prev  = float(col.dropna().iloc[-2]) if len(col.dropna()) >= 2 else None
+                if min_price <= price <= max_price:
+                    ticker = sym.replace(".OL", "")
+                    candidates.append({"symbol": sym, "ticker": ticker,
+                                       "price": price, "prev_close": prev})
+            except Exception:
                 continue
-            quote = self._get("/quote", {"symbol": ticker})
-            time.sleep(_RATE_SLEEP)
-            if not quote or not quote.get("c"):
-                continue
-            price = quote["c"]
-            if min_price <= price <= max_price:
-                candidates.append({
-                    "symbol": ticker,
-                    "display": sym.get("displaySymbol", ticker),
-                    "name": sym.get("description", ticker),
-                    "price": price,
-                    "prev_close": quote.get("pc"),
-                })
-            if (i + 1) % 50 == 0:
-                log.info("  … %d/%d sjekket, %d kandidater så langt",
-                         i + 1, len(symbols), len(candidates))
-        log.info("Prisfilteret (%.0f–%.0f NOK) ga %d kandidater.",
-                 min_price, max_price, len(candidates))
+
+        log.info("Prisfilteret (%.0f–%.0f NOK) ga %d kandidater.", min_price, max_price, len(candidates))
         return candidates
 
     def fetch_fundamentals(self, candidates: list[dict]) -> list[StockData]:
         log.info("Henter nøkkeltall for %d kandidater…", len(candidates))
         results = []
         for c in candidates:
-            ticker = c["symbol"]
-            sd = StockData(
-                ticker=ticker, name=c["name"], exchange="OSL",
-                currency="NOK", ask_eligible=True, source="finnhub",
-                price=c["price"], prev_close=c.get("prev_close"),
-            )
-            metrics_resp = self._get("/stock/metric", {"symbol": ticker, "metric": "all"})
-            time.sleep(_RATE_SLEEP)
-            if metrics_resp:
-                m = metrics_resp.get("metric", {})
-                sd.pe_ratio = _nn(m.get("peNormalizedAnnual") or m.get("peBasicExclExtraTTM"))
-                sd.pb_ratio = _nn(m.get("pbAnnual") or m.get("pbQuarterly"))
-                sd.ps_ratio = _nn(m.get("psAnnual"))
-                sd.ev_ebitda = _nn(m.get("evEbitdaAnnual") or m.get("evEbitdaTTM"))
-                sd.free_cash_flow = _nn(m.get("freeCashFlowAnnual") or m.get("freeCashFlowTTM"))
-                sd.dividend_yield = _nn(m.get("dividendYieldIndicatedAnnual"))
-                sd.roe = _nn(m.get("roeRfy") or m.get("roeTTM"))
-                sd.debt_to_equity = _nn(m.get("totalDebt/totalEquityAnnual"))
-                sd.market_cap = _nn(m.get("marketCapitalization"))
+            sym = c["symbol"]
+            sd = StockData(ticker=c["ticker"], name=c["ticker"], exchange="OSL",
+                           currency="NOK", ask_eligible=True, source="yahoo",
+                           price=c["price"], prev_close=c.get("prev_close"))
+            try:
+                info = yf.Ticker(sym).info
+                sd.name         = info.get("longName") or info.get("shortName") or c["ticker"]
+                sd.pe_ratio     = _nn(info.get("trailingPE") or info.get("forwardPE"))
+                sd.pb_ratio     = _nn(info.get("priceToBook"))
+                sd.ev_ebitda    = _nn(info.get("enterpriseToEbitda"))
+                sd.dividend_yield = _nn(info.get("dividendYield"))
+                sd.roe          = _nn(info.get("returnOnEquity"))
+                fcf = info.get("freeCashflow")
+                if fcf:
+                    sd.free_cash_flow = float(fcf) / 1e6
+            except Exception as exc:
+                log.debug("info-feil %s: %s", sym, exc)
             results.append(sd)
+            time.sleep(0.3)
         return results
 
     def apply_value_filter(self, stocks: list[StockData], thresholds: dict) -> list[StockData]:
@@ -122,20 +123,22 @@ class OsloScreener:
         log.info("Verdiscreening: %d av %d kandidater passerte.", len(passed), len(stocks))
         return passed
 
-    def run(self, thresholds: dict, min_price: float = 5.0, max_price: float = 200.0) -> list[StockData]:
-        symbols = self.fetch_all_symbols()
-        if not symbols:
+    def run(self, thresholds: dict, min_price: float = 5.0,
+            max_price: float = 200.0,
+            extra_tickers: list[str] | None = None) -> list[StockData]:
+        tickers_base = list(dict.fromkeys(_OSLO_TICKERS + (extra_tickers or [])))
+        tickers_ol   = [f"{t}.OL" for t in tickers_base]
+
+        candidates = self.fetch_prices(tickers_ol, min_price, max_price)
+        if not candidates:
             return []
-        price_candidates = self.fetch_quotes(symbols, min_price, max_price)
-        if not price_candidates:
-            return []
-        stocks = self.fetch_fundamentals(price_candidates)
+        stocks = self.fetch_fundamentals(candidates)
         return self.apply_value_filter(stocks, thresholds)
 
 
 def _nn(val) -> Optional[float]:
     try:
         f = float(val)
-        return f if f != 0.0 else None
+        return f if f == f and f != 0.0 else None
     except (TypeError, ValueError):
         return None
