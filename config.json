@@ -1,0 +1,91 @@
+{
+  "_comment": "Portefølje og screeningliste. Legg til/fjern aksjer her.",
+  "portfolio": [
+    {
+      "ticker": "EQNR",
+      "name": "Equinor",
+      "exchange": "OSL",
+      "currency": "NOK",
+      "ask_eligible": true,
+      "shares_owned": 0,
+      "manual_data": {
+        "comment": "Manuell override – brukes hvis Finnhub mangler data for denne",
+        "price": null,
+        "pe_ratio": null,
+        "pb_ratio": null,
+        "ev_ebit": null,
+        "ev_ebitda": null,
+        "free_cash_flow": null,
+        "dividend_yield": null
+      }
+    },
+    {
+      "ticker": "DNB",
+      "name": "DNB Bank",
+      "exchange": "OSL",
+      "currency": "NOK",
+      "ask_eligible": true,
+      "shares_owned": 0,
+      "manual_data": {
+        "price": null,
+        "pe_ratio": null,
+        "pb_ratio": null,
+        "ev_ebit": null,
+        "ev_ebitda": null,
+        "free_cash_flow": null,
+        "dividend_yield": null
+      }
+    },
+    {
+      "ticker": "AAPL",
+      "name": "Apple Inc.",
+      "exchange": "US",
+      "currency": "USD",
+      "ask_eligible": false,
+      "shares_owned": 0,
+      "manual_data": {
+        "price": null,
+        "pe_ratio": null,
+        "pb_ratio": null,
+        "ev_ebit": null,
+        "ev_ebitda": null,
+        "free_cash_flow": null,
+        "dividend_yield": null
+      }
+    }
+  ],
+  "watchlist": [
+    {
+      "ticker": "AKERBP",
+      "name": "Aker BP",
+      "exchange": "OSL",
+      "currency": "NOK",
+      "ask_eligible": true,
+      "manual_data": {
+        "price": null,
+        "pe_ratio": null,
+        "pb_ratio": null,
+        "ev_ebit": null,
+        "ev_ebitda": null,
+        "free_cash_flow": null,
+        "dividend_yield": null
+      }
+    }
+  ],
+  "thresholds": {
+    "_comment": "Daglig: varsle hvis kurs faller mer enn X% eller stiger mer enn Y% fra forrige stengedag",
+    "price_drop_pct": 5.0,
+    "price_rise_pct": 8.0,
+    "pe_ratio_max": 20.0,
+    "pb_ratio_max": 1.5,
+    "dividend_yield_min": 0.02,
+    "max_price_nok": 200.0,
+    "max_price_usd": 200.0
+  },
+  "cooldown_hours": 24,
+  "claude_model": "claude-sonnet-4-6",
+  "finnhub_exchange_map": {
+    "OSL": "^OSEBX",
+    "US": "US"
+  }
+}

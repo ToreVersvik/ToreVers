@@ -1,0 +1,9 @@
+journal.jsonl
+__pycache__/
+*.py[cod]
+.env
+.venv/
+venv/
+*.egg-info/
+dist/
+.pytest_cache/
