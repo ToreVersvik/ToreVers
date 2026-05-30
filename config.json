@@ -2,30 +2,12 @@
   "_comment": "Portefølje og screeningliste. Legg til/fjern aksjer her.",
   "portfolio": [
     {
-      "ticker": "EQNR",
-      "name": "Equinor",
+      "ticker": "BULKERS",
+      "name": "2020 Bulkers",
       "exchange": "OSL",
       "currency": "NOK",
       "ask_eligible": true,
-      "shares_owned": 0,
-      "manual_data": {
-        "comment": "Manuell override – brukes hvis Finnhub mangler data for denne",
-        "price": null,
-        "pe_ratio": null,
-        "pb_ratio": null,
-        "ev_ebit": null,
-        "ev_ebitda": null,
-        "free_cash_flow": null,
-        "dividend_yield": null
-      }
-    },
-    {
-      "ticker": "DNB",
-      "name": "DNB Bank",
-      "exchange": "OSL",
-      "currency": "NOK",
-      "ask_eligible": true,
-      "shares_owned": 0,
+      "shares_owned": 10,
       "manual_data": {
         "price": null,
         "pe_ratio": null,
@@ -37,30 +19,80 @@
       }
     },
     {
-      "ticker": "AAPL",
-      "name": "Apple Inc.",
-      "exchange": "US",
-      "currency": "USD",
-      "ask_eligible": false,
-      "shares_owned": 0,
-      "manual_data": {
-        "price": null,
-        "pe_ratio": null,
-        "pb_ratio": null,
-        "ev_ebit": null,
-        "ev_ebitda": null,
-        "free_cash_flow": null,
-        "dividend_yield": null
-      }
-    }
-  ],
-  "watchlist": [
-    {
-      "ticker": "AKERBP",
-      "name": "Aker BP",
+      "ticker": "BNOR",
+      "name": "Bluenord",
       "exchange": "OSL",
       "currency": "NOK",
       "ask_eligible": true,
+      "shares_owned": 9,
+      "manual_data": {
+        "price": null,
+        "pe_ratio": null,
+        "pb_ratio": null,
+        "ev_ebit": null,
+        "ev_ebitda": null,
+        "free_cash_flow": null,
+        "dividend_yield": null
+      }
+    },
+    {
+      "ticker": "HAUTO",
+      "name": "Höegh Autoliners",
+      "exchange": "OSL",
+      "currency": "NOK",
+      "ask_eligible": true,
+      "shares_owned": 5,
+      "manual_data": {
+        "price": null,
+        "pe_ratio": null,
+        "pb_ratio": null,
+        "ev_ebit": null,
+        "ev_ebitda": null,
+        "free_cash_flow": null,
+        "dividend_yield": null
+      }
+    },
+    {
+      "ticker": "ORK",
+      "name": "Orkla",
+      "exchange": "OSL",
+      "currency": "NOK",
+      "ask_eligible": true,
+      "shares_owned": 45,
+      "manual_data": {
+        "price": null,
+        "pe_ratio": null,
+        "pb_ratio": null,
+        "ev_ebit": null,
+        "ev_ebitda": null,
+        "free_cash_flow": null,
+        "dividend_yield": null
+      }
+    },
+    {
+      "ticker": "SPNO",
+      "name": "Sparebanken Norge",
+      "exchange": "OSL",
+      "currency": "NOK",
+      "ask_eligible": true,
+      "shares_owned": 6,
+      "manual_data": {
+        "price": null,
+        "pe_ratio": null,
+        "pb_ratio": null,
+        "ev_ebit": null,
+        "ev_ebitda": null,
+        "free_cash_flow": null,
+        "dividend_yield": null
+      }
+    },
+    {
+      "ticker": "VAR",
+      "name": "Vår Energi",
+      "exchange": "OSL",
+      "currency": "NOK",
+      "ask_eligible": true,
+      "shares_owned": 61,
       "manual_data": {
         "price": null,
         "pe_ratio": null,
@@ -72,6 +104,7 @@
       }
     }
   ],
+  "watchlist": [],
   "thresholds": {
     "_comment": "Daglig: varsle hvis kurs faller mer enn X% eller stiger mer enn Y% fra forrige stengedag",
     "price_drop_pct": 5.0,
