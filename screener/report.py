@@ -15,18 +15,23 @@ def run_weekly(portfolio: list[StockData], watchlist: list[StockData], threshold
     today = datetime.date.today().strftime("%d.%m.%Y")
     log.info("Starter ukentlig rapport (%s)…", today)
 
+    # Seksjon 1: portefølje
     log.info("Analyserer portefølje (%d aksjer)…", len(portfolio))
     s1 = claude_analyst.analyse_portfolio(portfolio, thresholds)
 
-    log.info("Søker etter undervurderte ideer (%d kandidater)…", len(watchlist))
-    s2 = claude_analyst.find_undervalued_ideas(watchlist, thresholds)
+    # Seksjon 2: ideer fra watchlist – maks 10 for å holde rapporten kortfattet
+    top_watchlist = watchlist[:10]
+    log.info("Søker etter undervurderte ideer (%d av %d kandidater)…",
+             len(top_watchlist), len(watchlist))
+    s2 = claude_analyst.find_undervalued_ideas(top_watchlist, thresholds)
 
+    # Seksjon 3: nyhetsdigest (alle aksjer)
     all_stocks = portfolio + watchlist
     log.info("Henter nyhetsdigest…")
     s3 = claude_analyst.news_digest(all_stocks)
 
     body = (
-        f"📅 Dato: {today}\n\n"
+        f"\U0001f4c5 Dato: {today}\n\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"*1. PORTEFØLJEGJENNOMGANG*\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n{s1}\n\n"

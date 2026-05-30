@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 _MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
 _client: Optional[anthropic.Anthropic] = None
 
-_NO_DATA_MSG = "⚠️ Ingen kursdata fra Finnhub – sjekk ticker i config.json."
+_NO_DATA_MSG = "⚠️ Ingen kursdata – sjekk ticker i config.json."
 
 
 def _get_client() -> anthropic.Anthropic:

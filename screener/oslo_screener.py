@@ -83,7 +83,8 @@ class YahooOsloScreener:
                 sd.pe_ratio     = _nn(info.get("trailingPE") or info.get("forwardPE"))
                 sd.pb_ratio     = _nn(info.get("priceToBook"))
                 sd.ev_ebitda    = _nn(info.get("enterpriseToEbitda"))
-                sd.dividend_yield = _nn(info.get("dividendYield"))
+                dy = _nn(info.get("dividendYield"))
+                sd.dividend_yield = dy if (dy is not None and dy <= 1.0) else None
                 sd.roe          = _nn(info.get("returnOnEquity"))
                 fcf = info.get("freeCashflow")
                 if fcf:
