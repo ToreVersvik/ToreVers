@@ -6,6 +6,7 @@ import logging
 import time
 from typing import Optional
 
+import pandas as pd
 import yfinance as yf
 
 from .base import DataSource, StockData
@@ -46,7 +47,8 @@ class YahooDataSource(DataSource):
             sd.pe_ratio     = _nn(info.get("trailingPE") or info.get("forwardPE"))
             sd.pb_ratio     = _nn(info.get("priceToBook"))
             sd.ps_ratio     = _nn(info.get("priceToSalesTrailing12Months"))
-            sd.ev_ebitda    = _nn(info.get("enterpriseToEbitda"))
+            ev = _nn(info.get("enterpriseToEbitda"))
+            sd.ev_ebitda    = ev if (ev is not None and 0 < ev <= 50) else None
             dy = _nn(info.get("dividendYield"))
             sd.dividend_yield = dy if (dy is not None and dy <= 1.0) else None
             sd.roe          = _nn(info.get("returnOnEquity"))
@@ -77,6 +79,34 @@ class YahooDataSource(DataSource):
 
         time.sleep(_RATE_SLEEP)
         return sd
+
+    def fetch_prices_batch(self, stocks_cfg: list[dict]) -> list[StockData]:
+        """Rask batch-prisfetch med yf.download – ingen nøkkeltall, kun kurs/forrige kurs."""
+        syms = [self._yf_sym(c["ticker"], c.get("exchange", "")) for c in stocks_cfg]
+        try:
+            raw = yf.download(syms, period="2d", auto_adjust=True, progress=False, threads=True)
+            close = raw["Close"] if "Close" in raw else pd.DataFrame()
+        except Exception as exc:
+            log.error("Batch-prisfeil: %s", exc)
+            close = pd.DataFrame()
+
+        results = []
+        for c, sym in zip(stocks_cfg, syms):
+            sd = StockData(
+                ticker=c["ticker"], name=c.get("name", c["ticker"]),
+                exchange=c.get("exchange", ""), currency=c.get("currency", ""),
+                ask_eligible=c.get("ask_eligible", True), source="yahoo",
+            )
+            try:
+                col = (close[sym] if sym in close.columns else pd.Series()).dropna()
+                if not col.empty:
+                    sd.price = float(col.iloc[-1])
+                    if len(col) >= 2:
+                        sd.prev_close = float(col.iloc[-2])
+            except Exception:
+                pass
+            results.append(sd)
+        return results
 
 
 def _nn(val) -> Optional[float]:

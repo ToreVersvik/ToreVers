@@ -22,28 +22,19 @@ log = logging.getLogger("daily")
 CONFIG_PATH = pathlib.Path("config.json")
 
 
-def load_data_source(config: dict):
-    from screener.data_sources.yahoo import YahooDataSource
-    from screener.data_sources.manual import ManualDataSource, FallbackDataSource
-
-    manual_map = {
-        s["ticker"]: s.get("manual_data", {})
-        for s in config.get("portfolio", []) + config.get("watchlist", [])
-    }
-    return FallbackDataSource(primary=YahooDataSource(), secondary=ManualDataSource(manual_map))
-
-
 def main() -> int:
     if not CONFIG_PATH.exists():
         log.error("Finner ikke config.json")
         return 1
 
     config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-    source = load_data_source(config)
+
+    from screener.data_sources.yahoo import YahooDataSource
+    source = YahooDataSource()
 
     all_stocks_cfg = config.get("portfolio", []) + config.get("watchlist", [])
-    log.info("Henter data for %d aksjer…", len(all_stocks_cfg))
-    stocks = source.fetch_many(all_stocks_cfg)
+    log.info("Batch-henter kurs for %d aksjer…", len(all_stocks_cfg))
+    stocks = source.fetch_prices_batch(all_stocks_cfg)
 
     from screener.screener import run_daily
     sent = run_daily(

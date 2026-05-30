@@ -24,7 +24,7 @@ _OSLO_TICKERS = [
     "REACH","SCR","SOLON","VEI","WILH","CRAYN","LINK","MAGNORA",
     "THIN","VISTIN","SVEG","PROTCT","ODL","SMARTC","JIN","HOEGH",
     "LUMI","SOFF","SIOFF","MPC","OKEA","PARB","QEC","RIVR","SDRL",
-    "SHELF","SHF","SHIP","SHLF","SOFF","SPAR","SRBANK","STRO","SUBC",
+    "SHELF","SHF","SHIP","SHLF","SPAR","SRBANK","STRO",
     "BWE","CADLR","CLOUD","COMROD","FKRAFT","KIT","KROHN","MEDIC",
     "NAK","NORDIC","NYKD","OTEC","PEN","PNOR","SAGA","SBO","SCH",
     "SGR","SKUE","SMART","SNSA","SOFTOX","SWA","TNOR","TOTG","TRQ",
@@ -82,7 +82,8 @@ class YahooOsloScreener:
                 sd.name         = info.get("longName") or info.get("shortName") or c["ticker"]
                 sd.pe_ratio     = _nn(info.get("trailingPE") or info.get("forwardPE"))
                 sd.pb_ratio     = _nn(info.get("priceToBook"))
-                sd.ev_ebitda    = _nn(info.get("enterpriseToEbitda"))
+                ev = _nn(info.get("enterpriseToEbitda"))
+                sd.ev_ebitda    = ev if (ev is not None and 0 < ev <= 50) else None
                 dy = _nn(info.get("dividendYield"))
                 sd.dividend_yield = dy if (dy is not None and dy <= 1.0) else None
                 sd.roe          = _nn(info.get("returnOnEquity"))
@@ -98,16 +99,16 @@ class YahooOsloScreener:
     def apply_value_filter(self, stocks: list[StockData], thresholds: dict) -> list[StockData]:
         pe_max = thresholds.get("pe_ratio_max", 20.0)
         pb_max = thresholds.get("pb_ratio_max", 1.5)
-        passed = []
+        scored = []
         for sd in stocks:
             hits, tests = 0, 0
             if sd.pe_ratio is not None:
                 tests += 1
                 if 0 < sd.pe_ratio <= pe_max:
                     hits += 1
-            if sd.pb_ratio is not None:
+            if sd.pb_ratio is not None and sd.pb_ratio > 0:
                 tests += 1
-                if 0 < sd.pb_ratio <= pb_max:
+                if sd.pb_ratio <= pb_max:
                     hits += 1
             if sd.ev_ebitda is not None:
                 tests += 1
@@ -120,7 +121,10 @@ class YahooOsloScreener:
             if tests == 0:
                 continue
             if hits >= min(2, tests):
-                passed.append(sd)
+                scored.append((hits, sd.pe_ratio or 999.0, sd))
+
+        scored.sort(key=lambda x: (-x[0], x[1]))  # flest kriterier først, lavest P/E som tiebreaker
+        passed = [sd for _, _, sd in scored]
         log.info("Verdiscreening: %d av %d kandidater passerte.", len(passed), len(stocks))
         return passed
 

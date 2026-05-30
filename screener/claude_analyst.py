@@ -47,7 +47,10 @@ def _format_verified_numbers(sd: StockData) -> str:
     if sd.pe_ratio is not None:
         lines.append(f"P/E: {sd.pe_ratio:.1f}")
     if sd.pb_ratio is not None:
-        lines.append(f"P/B: {sd.pb_ratio:.2f}")
+        if sd.pb_ratio < 0:
+            lines.append(f"P/B: {sd.pb_ratio:.2f} ⚠️ (negativ bokverdi – høy gjeld)")
+        else:
+            lines.append(f"P/B: {sd.pb_ratio:.2f}")
     if sd.ev_ebitda is not None:
         lines.append(f"EV/EBITDA: {sd.ev_ebitda:.1f}")
     if sd.free_cash_flow is not None:
