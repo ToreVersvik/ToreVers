@@ -105,6 +105,13 @@
     }
   ],
   "watchlist": [],
+  "dynamic_watchlist": {
+    "_comment": "Screener hele Oslo Børs dynamisk i stedet for fast watchlist",
+    "enabled": true,
+    "exchange": "OSL",
+    "min_price_nok": 5.0,
+    "max_price_nok": 200.0
+  },
   "thresholds": {
     "_comment": "Daglig: varsle hvis kurs faller mer enn X% eller stiger mer enn Y% fra forrige stengedag",
     "price_drop_pct": 5.0,

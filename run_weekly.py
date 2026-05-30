@@ -9,6 +9,7 @@ Env som kreves:
 """
 import json
 import logging
+import os
 import pathlib
 import sys
 
@@ -28,7 +29,7 @@ def load_data_source(config: dict):
 
     manual_map = {
         s["ticker"]: s.get("manual_data", {})
-        for s in config.get("portfolio", []) + config.get("watchlist", [])
+        for s in config.get("portfolio", [])
     }
     try:
         primary = FinnhubDataSource()
@@ -37,6 +38,37 @@ def load_data_source(config: dict):
         return ManualDataSource(manual_map)
 
     return FallbackDataSource(primary=primary, secondary=ManualDataSource(manual_map))
+
+
+def load_watchlist(config: dict) -> list:
+    """
+    Dynamisk watchlist: screener hele Oslo Børs 5–200 NOK hvis aktivert.
+    Faller tilbake til fast watchlist i config hvis ikke.
+    """
+    dyn = config.get("dynamic_watchlist", {})
+    if not dyn.get("enabled", False):
+        log.info("Dynamisk watchlist deaktivert – bruker fast watchlist.")
+        return []
+
+    api_key = os.environ.get("FINNHUB_API_KEY", "")
+    if not api_key:
+        log.warning("FINNHUB_API_KEY ikke satt – kan ikke kjøre dynamisk Oslo-screener.")
+        return []
+
+    from screener.oslo_screener import OsloScreener
+    screener = OsloScreener(api_key=api_key)
+
+    min_p = dyn.get("min_price_nok", 5.0)
+    max_p = dyn.get("max_price_nok", 200.0)
+
+    log.info("Kjører dynamisk Oslo Børs-screener (%.0f–%.0f NOK)…", min_p, max_p)
+    candidates = screener.run(
+        thresholds=config.get("thresholds", {}),
+        min_price=min_p,
+        max_price=max_p,
+    )
+    log.info("%d undervurderte kandidater funnet på Oslo Børs.", len(candidates))
+    return candidates
 
 
 def main() -> int:
@@ -48,13 +80,10 @@ def main() -> int:
     source = load_data_source(config)
 
     portfolio_cfg = config.get("portfolio", [])
-    watchlist_cfg = config.get("watchlist", [])
-
-    log.info("Henter data for portefølje (%d) og watchlist (%d)…",
-             len(portfolio_cfg), len(watchlist_cfg))
-
+    log.info("Henter data for portefølje (%d aksjer)…", len(portfolio_cfg))
     portfolio_stocks = source.fetch_many(portfolio_cfg)
-    watchlist_stocks = source.fetch_many(watchlist_cfg)
+
+    watchlist_stocks = load_watchlist(config)
 
     from screener.report import run_weekly
     run_weekly(
