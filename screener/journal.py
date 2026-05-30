@@ -18,7 +18,6 @@ def log_entry(event_type: str, ticker: str, payload: dict) -> None:
 
 
 def read_recent(event_type: str, ticker: str, hours: float) -> list[dict]:
-    """Returner oppføringer for ticker de siste N timene."""
     if not JOURNAL_PATH.exists():
         return []
     cutoff = datetime.datetime.utcnow() - datetime.timedelta(hours=hours)

@@ -1,11 +1,9 @@
 name: Daglig aksjescreening
 
 on:
-  # 14:30 UTC = 16:30 CEST (sommer) / 15:30 CET (vinter)
-  # Juster til 15:30 UTC på vintertid hvis ønskelig
   schedule:
     - cron: "30 14 * * 1-5"   # hverdager kl 14:30 UTC ≈ 16:30 norsk sommertid
-  workflow_dispatch:            # manuell kjøring fra GitHub UI
+  workflow_dispatch:
 
 jobs:
   screen:
@@ -30,5 +28,4 @@ jobs:
           FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          # ANTHROPIC_API_KEY ikke nødvendig for daglig modus
         run: python run_daily.py

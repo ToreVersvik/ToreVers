@@ -41,10 +41,6 @@ def load_data_source(config: dict):
 
 
 def load_watchlist(config: dict) -> list:
-    """
-    Dynamisk watchlist: screener hele Oslo Børs 5–200 NOK hvis aktivert.
-    Faller tilbake til fast watchlist i config hvis ikke.
-    """
     dyn = config.get("dynamic_watchlist", {})
     if not dyn.get("enabled", False):
         log.info("Dynamisk watchlist deaktivert – bruker fast watchlist.")

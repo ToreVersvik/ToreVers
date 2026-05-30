@@ -1,9 +1,8 @@
 name: Ukentlig aksjerapport
 
 on:
-  # Søndag kl 18:00 UTC = 19:00/20:00 norsk tid
   schedule:
-    - cron: "0 18 * * 0"
+    - cron: "0 18 * * 0"   # Søndag kl 18:00 UTC ≈ 20:00 norsk tid
   workflow_dispatch:
 
 jobs:

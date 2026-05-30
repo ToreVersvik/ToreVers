@@ -22,7 +22,7 @@ _EXCHANGE_SUFFIX = {
     "US": "",
 }
 _BASE = "https://finnhub.io/api/v1"
-_RATE_SLEEP = 0.25  # sekunder mellom kall (60 req/min på gratis)
+_RATE_SLEEP = 0.25
 
 
 class FinnhubDataSource(DataSource):
@@ -51,14 +51,12 @@ class FinnhubDataSource(DataSource):
         sd = StockData(ticker=ticker, name=name or ticker, exchange=exchange,
                        currency=currency, ask_eligible=ask_eligible, source="finnhub")
 
-        # Kurs
         quote = self._get("/quote", {"symbol": fh_ticker})
         time.sleep(_RATE_SLEEP)
         if quote and quote.get("c"):
             sd.price = quote["c"]
             sd.prev_close = quote.get("pc")
 
-        # Nøkkeltall (basic financials)
         metrics_resp = self._get("/stock/metric", {"symbol": fh_ticker, "metric": "all"})
         time.sleep(_RATE_SLEEP)
         if metrics_resp:
@@ -73,7 +71,6 @@ class FinnhubDataSource(DataSource):
             sd.debt_to_equity = _nn(m.get("totalDebt/totalEquityAnnual"))
             sd.market_cap = _nn(m.get("marketCapitalization"))
 
-        # Analytikermål
         reco = self._get("/stock/recommendation", {"symbol": fh_ticker})
         time.sleep(_RATE_SLEEP)
         if reco and isinstance(reco, list) and reco:
@@ -96,7 +93,6 @@ class FinnhubDataSource(DataSource):
         if price_target and price_target.get("targetMean"):
             sd.analyst_target_price = _nn(price_target["targetMean"])
 
-        # Nyheter (siste 7 dager)
         import datetime
         today = datetime.date.today()
         week_ago = today - datetime.timedelta(days=7)
@@ -121,7 +117,6 @@ class FinnhubDataSource(DataSource):
 
 
 def _nn(val) -> Optional[float]:
-    """Returner None hvis verdien er 0, None, eller ikke et tall."""
     try:
         f = float(val)
         return f if f != 0.0 else None

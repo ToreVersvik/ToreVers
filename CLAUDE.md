@@ -46,7 +46,7 @@ Amerikanske enkeltaksjer kan IKKE ligge i ASK → merk US-ideer tydelig som
 - **Telegram** (token/chat-id fra env); konsoll-fallback hvis ikke satt.
 - **Cooldown** per navn for å unngå spam og overtrading.
 - Logg alle varsler til `journal.jsonl` for etterprøving over tid.
-- **Planlegging via GitHub Actions** (uovervåket, gratis): daglig kl 16:30 norsk
+- **Planlegging via GitHub Actions** (uøvervåket, gratis): daglig kl 16:30 norsk
   tid på hverdager + ukentlig (f.eks. søndag kveld). Nøkler som repo-secrets.
 
 ## Output-stil

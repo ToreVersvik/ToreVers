@@ -33,7 +33,6 @@ def _send_telegram(text: str) -> bool:
 
 
 def send_alert(ticker: str, event_type: str, message: str, cooldown_hours: float = 24.0) -> None:
-    """Send varsel – hopp over hvis vi har sendt samme type for samme ticker nylig."""
     recent = read_recent(event_type=event_type, ticker=ticker, hours=cooldown_hours)
     if recent:
         log.info("Cooldown aktiv for %s/%s – hopper over", ticker, event_type)
@@ -47,9 +46,7 @@ def send_alert(ticker: str, event_type: str, message: str, cooldown_hours: float
 
 
 def send_report(title: str, body: str) -> None:
-    """Send rapport (ingen cooldown – ukentlig)."""
     full = f"*{title}*\n\n{body}"
-    # Telegram har 4096-tegngrense; del opp ved behov
     chunks = _chunk(full, 4000)
     for chunk in chunks:
         sent = _send_telegram(chunk)

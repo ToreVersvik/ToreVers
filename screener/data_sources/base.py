@@ -30,11 +30,9 @@ class StockData:
     roe: Optional[float] = None
     debt_to_equity: Optional[float] = None
 
-    # Analytikerkonsensus (kan mangle)
     analyst_target_price: Optional[float] = None
     analyst_rating: Optional[str] = None
 
-    # Nyheter (liste med dicts: {headline, url, datetime, summary})
     news: list = field(default_factory=list)
 
     source: str = "unknown"
@@ -47,11 +45,9 @@ class DataSource(ABC):
     @abstractmethod
     def fetch(self, ticker: str, exchange: str, currency: str,
               name: str = "", ask_eligible: bool = True) -> StockData:
-        """Hent data for én aksje. Returner StockData med None for manglende felt."""
         ...
 
     def fetch_many(self, stocks: list[dict]) -> list[StockData]:
-        """Hent data for liste av aksjer. Kan overrides for batch-kall."""
         results = []
         for s in stocks:
             results.append(self.fetch(

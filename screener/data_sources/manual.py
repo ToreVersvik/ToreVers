@@ -1,7 +1,5 @@
 """
 Manuell fallback-datakilde.
-Bruker tall fra config.json → manual_data for aksjene.
-Nyttig for Nordiske aksjer der Finnhub mangler data.
 """
 import logging
 from typing import Optional
@@ -12,10 +10,7 @@ log = logging.getLogger(__name__)
 
 
 class ManualDataSource(DataSource):
-    """Wrapper: leser ferdig-lastede manual_data-dicts fra config."""
-
     def __init__(self, manual_map: dict[str, dict]):
-        # manual_map: {ticker: manual_data_dict}
         self._map = manual_map
 
     def fetch(self, ticker: str, exchange: str, currency: str,
@@ -44,11 +39,6 @@ def _nn(val) -> Optional[float]:
 
 
 class FallbackDataSource(DataSource):
-    """
-    Kjeder to kilder: prøv primær først, fyll hull med sekundær.
-    Brukes slik: FallbackDataSource(primary=FinnhubDataSource(), secondary=ManualDataSource(...))
-    """
-
     def __init__(self, primary: DataSource, secondary: DataSource):
         self._primary = primary
         self._secondary = secondary
@@ -58,7 +48,6 @@ class FallbackDataSource(DataSource):
         result = self._primary.fetch(ticker, exchange, currency, name, ask_eligible)
         fallback = self._secondary.fetch(ticker, exchange, currency, name, ask_eligible)
 
-        # Fyll None-felt fra sekundær
         for field_name in [
             "price", "prev_close", "pe_ratio", "pb_ratio", "ps_ratio",
             "ev_ebit", "ev_ebitda", "free_cash_flow", "dividend_yield",

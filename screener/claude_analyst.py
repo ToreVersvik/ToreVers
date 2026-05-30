@@ -1,8 +1,6 @@
 """
 Claude API-integrasjon.
 PRINSIPP: sender KUN ferdig verifiserte tall fra StockData.
-Claude gjetter aldri kurs, multipler eller utbytte.
-Tall som er None utelates – Claude instrueres til å hoppe over den testen.
 """
 import os
 import json
@@ -31,7 +29,6 @@ def _get_client() -> anthropic.Anthropic:
 
 
 def _format_verified_numbers(sd: StockData) -> str:
-    """Bygg en tekstblokk med kun de tallene vi faktisk har."""
     lines = [f"Ticker: {sd.ticker} | Navn: {sd.name} | Børs: {sd.exchange} | Valuta: {sd.currency}"]
     if sd.price is not None:
         lines.append(f"Kurs: {sd.price:.2f}")
@@ -66,7 +63,6 @@ def _format_verified_numbers(sd: StockData) -> str:
 
 
 def analyse_portfolio(stocks: list[StockData], thresholds: dict) -> str:
-    """Seksjon 1: Porteføljegjennomgang. Returner ferdig formatert tekst."""
     blocks = []
     for sd in stocks:
         if sd.fetch_error:
@@ -78,7 +74,6 @@ def analyse_portfolio(stocks: list[StockData], thresholds: dict) -> str:
 
 
 def find_undervalued_ideas(stocks: list[StockData], thresholds: dict) -> str:
-    """Seksjon 2: Undervurderte ideer fra watchlist."""
     candidates = []
     for sd in stocks:
         if sd.price is None:
@@ -99,7 +94,6 @@ def find_undervalued_ideas(stocks: list[StockData], thresholds: dict) -> str:
 
 
 def news_digest(stocks: list[StockData]) -> str:
-    """Seksjon 3: Nyhetsdigest – kun tese-relevante nyheter."""
     all_news_stocks = [sd for sd in stocks if sd.news]
     if not all_news_stocks:
         return "_Ingen nyheter de siste 7 dagene._"
