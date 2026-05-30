@@ -72,6 +72,14 @@ def main() -> int:
         log.error("Finner ikke config.json")
         return 1
 
+    # Sjekk at nødvendige secrets er satt
+    for key in ("FINNHUB_API_KEY", "ANTHROPIC_API_KEY"):
+        val = os.environ.get(key, "")
+        if val:
+            log.info("%s: satt (%d tegn)", key, len(val))
+        else:
+            log.warning("%s: MANGLER – sjekk GitHub Secrets", key)
+
     config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     source = load_data_source(config)
 
