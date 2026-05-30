@@ -3,8 +3,9 @@ Claude API-integrasjon.
 PRINSIPP: sender KUN ferdig verifiserte tall fra StockData.
 Claude gjetter aldri kurs, multipler eller utbytte.
 """
-import os
 import json
+import os
+import re
 import time
 import logging
 from typing import Optional
@@ -18,7 +19,8 @@ log = logging.getLogger(__name__)
 _MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
 _client: Optional[anthropic.Anthropic] = None
 
-_NO_DATA_MSG = "⚠️ Ingen kursdata – sjekk ticker i config.json."
+_BUY_RECS  = {"sterkt kjøp", "kjøp"}
+_WARN_RECS = {"avvent", "selg"}
 
 
 def _get_client() -> anthropic.Anthropic:
@@ -65,30 +67,116 @@ def _format_verified_numbers(sd: StockData) -> str:
     return "\n".join(lines)
 
 
+def _parse_json(raw: str) -> dict:
+    """Extract JSON from Claude response, tolerating markdown fences."""
+    text = re.sub(r"```(?:json)?\s*", "", raw).strip()
+    m = re.search(r"\{.*\}", text, re.DOTALL)
+    if m:
+        try:
+            return json.loads(m.group())
+        except json.JSONDecodeError:
+            pass
+    return {}
+
+
+def _fallback_rec(raw: str, options: list[str]) -> str:
+    raw_lower = raw.lower()
+    for r in options:
+        if r.lower() in raw_lower:
+            return r
+    return "ukjent"
+
+
+def _analyse_stock(sd: StockData, mode: str) -> dict:
+    """Call Claude and return {"rec": str, "grunn": str, "oppside": str}."""
+    verified = _format_verified_numbers(sd)
+    ask_txt = "ASK-berettiget" if sd.ask_eligible else "IKKE ASK"
+
+    if mode == "portfolio":
+        rec_opts = "Sterkt kjøp|Kjøp|Hold|Avvent|Selg"
+        json_tmpl = '{"rec": "...", "grunn": "maks 12 ord"}'
+    else:
+        rec_opts = "Sterkt kjøp|Kjøp|Hold|Avvent|Unngå"
+        json_tmpl = '{"rec": "...", "grunn": "maks 12 ord", "oppside": "spenn f.eks +10-30%"}'
+
+    prompt = (
+        f"Verdiinvestor. Svar KUN med JSON – ingen annen tekst:\n"
+        f"{json_tmpl}\n"
+        f"rec må være én av: {rec_opts}\n\n"
+        f"Tall:\n{verified}\n{ask_txt}."
+    )
+    raw = _call_claude(prompt, max_tokens=100)
+    data = _parse_json(raw)
+
+    all_opts = ["Sterkt kjøp", "Kjøp", "Hold", "Avvent", "Selg", "Unngå"]
+    rec = data.get("rec") or _fallback_rec(raw, all_opts)
+    return {
+        "rec": rec,
+        "grunn": data.get("grunn", ""),
+        "oppside": data.get("oppside", ""),
+    }
+
+
+def _key_metrics(sd: StockData) -> str:
+    bits = []
+    if sd.price:          bits.append(f"Kurs {sd.price:.1f}")
+    if sd.pe_ratio:       bits.append(f"P/E {sd.pe_ratio:.1f}")
+    if sd.pb_ratio:       bits.append(f"P/B {sd.pb_ratio:.2f}")
+    if sd.ev_ebitda:      bits.append(f"EV/EBITDA {sd.ev_ebitda:.1f}")
+    if sd.free_cash_flow: bits.append(f"FCF {sd.free_cash_flow:.0f}M")
+    return " · ".join(bits)
+
+
 def analyse_portfolio(stocks: list[StockData], thresholds: dict) -> str:
-    blocks = []
-    for sd in stocks:
-        if sd.fetch_error:
-            blocks.append(f"*{sd.name}* ({sd.ticker}): datafeil – {sd.fetch_error}")
-            continue
-        if not _has_data(sd):
-            blocks.append(f"*{sd.name}* ({sd.ticker})\n{_NO_DATA_MSG}")
-            continue
-        blocks.append(_analyse_single(sd, thresholds, mode="portfolio"))
+    """Returnerer kun salgssignaler (Selg/Avvent); én OK-linje hvis alt er greit."""
+    with_data = [s for s in stocks if _has_data(s)]
+    alerts = []
+
+    for sd in with_data:
+        result = _analyse_stock(sd, mode="portfolio")
+        rec = result["rec"].lower()
+        if rec in _WARN_RECS:
+            emoji = "\U0001f534" if rec == "selg" else "\U0001f7e1"
+            lines = [f"{emoji} *{sd.name}* ({sd.ticker}) – {result['rec']}"]
+            m = _key_metrics(sd)
+            if m:
+                lines.append(m)
+            if result["grunn"]:
+                lines.append(result["grunn"])
+            alerts.append("\n".join(lines))
         time.sleep(0.3)
-    return "\n\n---\n\n".join(blocks)
+
+    if not alerts:
+        return f"✅ Ingen salgssignaler – alle {len(with_data)} aksjer OK"
+    return "\n\n".join(alerts)
 
 
 def find_undervalued_ideas(stocks: list[StockData], thresholds: dict) -> str:
+    """Returnerer kun Kjøp/Sterkt kjøp i kompakt format."""
     candidates = [sd for sd in stocks if sd.price is not None]
     if not candidates:
-        return "_Ingen kandidater med kursdata fra Oslo Børs-screener._"
+        return "_Ingen kandidater med kursdata._"
 
-    blocks = []
+    buys = []
     for sd in candidates:
-        blocks.append(_analyse_single(sd, thresholds, mode="idea"))
+        result = _analyse_stock(sd, mode="idea")
+        rec = result["rec"].lower()
+        if rec in _BUY_RECS:
+            emoji = "\U0001f7e2" if rec == "sterkt kjøp" else "✅"
+            lines = [f"{emoji} *{sd.name}* ({sd.ticker}) – {result['rec']}"]
+            m = _key_metrics(sd)
+            if m:
+                lines.append(m)
+            if result["grunn"]:
+                lines.append(result["grunn"])
+            if result["oppside"]:
+                lines.append(f"Oppside: {result['oppside']}")
+            buys.append("\n".join(lines))
         time.sleep(0.3)
-    return "\n\n---\n\n".join(blocks)
+
+    if not buys:
+        return "_Ingen kjøpsideer passerte kriteriene denne uken._"
+    return "\n\n".join(buys)
 
 
 def news_digest(stocks: list[StockData]) -> str:
@@ -112,37 +200,7 @@ def news_digest(stocks: list[StockData]) -> str:
         "Maks 2 nyheter per aksje. Svar på norsk. Vær kort.\n\n"
         f"{json.dumps(news_payload, ensure_ascii=False)}"
     )
-    return _call_claude(prompt, max_tokens=600)
-
-
-def _analyse_single(sd: StockData, thresholds: dict, mode: str) -> str:
-    verified = _format_verified_numbers(sd)
-    ask_txt = "ASK-berettiget" if sd.ask_eligible else "IKKE ASK (vanlig konto)"
-
-    if mode == "portfolio":
-        prompt = (
-            f"Verdiinvestor-analyse. Kun verifiserte tall – ikke finn på noe.\n"
-            f"Svar MAKS 120 ord. Bruk bullet-punkter. Norsk.\n\n"
-            f"Tall:\n{verified}\n\n"
-            f"Gi: 1) Vurdering av tallene 2) Anbefaling (Sterkt kjøp/Kjøp/Hold/Avvent/Unngå) "
-            f"3) Foreslått kjøpsnivå med margin of safety (kun hvis data finnes) "
-            f"4) Oppside 1/3/5 år som spenn\n"
-            f"{ask_txt}. "
-            f"Avslutt: _Informasjon/læring, ikke finansiell rådgivning._"
-        )
-    else:
-        prompt = (
-            f"Verdiinvestor – undervurdert idé? Kun verifiserte tall.\n"
-            f"Svar MAKS 80 ord. Norsk.\n\n"
-            f"Tall:\n{verified}\n\n"
-            f"Gi: 1) Verdikriterier oppfylt? (P/E, P/B, FCF) "
-            f"2) Oppside pessimistisk/sannsynlig/optimistisk "
-            f"3) Anbefaling (Sterkt kjøp/Kjøp/Hold/Avvent/Unngå)\n"
-            f"{ask_txt}. "
-            f"Avslutt: _Informasjon/læring, ikke finansiell rådgivning._"
-        )
-
-    return f"*{sd.name}* ({sd.ticker})\n{_call_claude(prompt, max_tokens=300)}"
+    return _call_claude(prompt, max_tokens=500)
 
 
 def _call_claude(prompt: str, max_tokens: int = 300) -> str:
