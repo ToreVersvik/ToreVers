@@ -29,6 +29,7 @@ _OSLO_TICKERS = [
     "NAK","NORDIC","NYKD","OTEC","PEN","PNOR","SAGA","SBO","SCH",
     "SGR","SKUE","SMART","SNSA","SOFTOX","SWA","TNOR","TOTG","TRQ",
     "TWOL","ULTI","VOSS","WILS","HMONY","FLYR","AUTOSTORE",
+    "OTELLO","SPSB",
 ]
 
 

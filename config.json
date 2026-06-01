@@ -9,7 +9,7 @@
       "ask_eligible": true,
       "shares_owned": 10,
       "manual_data": {
-        "price": null,
+        "price": 4.25,
         "pe_ratio": null,
         "pb_ratio": null,
         "ev_ebit": null,
@@ -20,13 +20,13 @@
     },
     {
       "ticker": "BNOR",
-      "name": "Bluenord",
+      "name": "BlueNord",
       "exchange": "OSL",
       "currency": "NOK",
       "ask_eligible": true,
       "shares_owned": 9,
       "manual_data": {
-        "price": null,
+        "price": 542.0,
         "pe_ratio": null,
         "pb_ratio": null,
         "ev_ebit": null,
@@ -43,7 +43,7 @@
       "ask_eligible": true,
       "shares_owned": 5,
       "manual_data": {
-        "price": null,
+        "price": 137.70,
         "pe_ratio": null,
         "pb_ratio": null,
         "ev_ebit": null,
@@ -60,7 +60,24 @@
       "ask_eligible": true,
       "shares_owned": 45,
       "manual_data": {
-        "price": null,
+        "price": 96.70,
+        "pe_ratio": null,
+        "pb_ratio": null,
+        "ev_ebit": null,
+        "ev_ebitda": null,
+        "free_cash_flow": null,
+        "dividend_yield": null
+      }
+    },
+    {
+      "ticker": "OTELLO",
+      "name": "Otello Corporation",
+      "exchange": "OSL",
+      "currency": "NOK",
+      "ask_eligible": true,
+      "shares_owned": 83,
+      "manual_data": {
+        "price": 18.20,
         "pe_ratio": null,
         "pb_ratio": null,
         "ev_ebit": null,
@@ -77,7 +94,7 @@
       "ask_eligible": true,
       "shares_owned": 6,
       "manual_data": {
-        "price": null,
+        "price": 188.24,
         "pe_ratio": null,
         "pb_ratio": null,
         "ev_ebit": null,
@@ -94,7 +111,7 @@
       "ask_eligible": true,
       "shares_owned": 61,
       "manual_data": {
-        "price": null,
+        "price": 47.0,
         "pe_ratio": null,
         "pb_ratio": null,
         "ev_ebit": null,
