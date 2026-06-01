@@ -64,6 +64,12 @@ def main() -> int:
         log.error("Finner ikke config.json")
         return 1
 
+    # Guard mot duplikate kjøringer (flere schedule-entries kan trigge samme dag)
+    from screener.journal import read_recent
+    if read_recent(event_type="weekly_report", ticker="ALL", hours=20):
+        log.info("Ukentlig rapport allerede sendt i dag – hopper over.")
+        return 0
+
     # Sjekk at nødvendige secrets er satt
     for key in ("ANTHROPIC_API_KEY",):
         val = os.environ.get(key, "")
