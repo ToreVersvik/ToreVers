@@ -36,29 +36,40 @@ class YahooOsloScreener:
 
     def fetch_prices(self, tickers_ol: list[str],
                      min_price: float, max_price: float) -> list[dict]:
-        """Batch-hent kurs for alle tickers, returner de i prisintervallet."""
+        """Batch-hent kurs i bolker à 30 for å unngå rate limiting."""
         log.info("Batch-henter kurs for %d Oslo Børs-tickers…", len(tickers_ol))
-        try:
-            raw = yf.download(
-                tickers_ol,
-                period="2d",
-                auto_adjust=True,
-                progress=False,
-                threads=True,
-            )
-            close = raw["Close"] if "Close" in raw else raw.get("close", pd.DataFrame())
-        except Exception as exc:
-            log.error("yf.download feilet: %s", exc)
-            return []
+        _BATCH = 30
+        _BATCH_SLEEP = 5.0
+
+        all_close: dict[str, pd.Series] = {}
+        for i in range(0, len(tickers_ol), _BATCH):
+            batch = tickers_ol[i:i + _BATCH]
+            try:
+                raw = yf.download(
+                    batch,
+                    period="2d",
+                    auto_adjust=True,
+                    progress=False,
+                    threads=False,
+                )
+                close = raw["Close"] if "Close" in raw else raw.get("close", pd.DataFrame())
+                if not close.empty:
+                    for sym in close.columns:
+                        all_close[sym] = close[sym]
+            except Exception as exc:
+                log.warning("Batch %d/%d feilet: %s",
+                            i // _BATCH + 1, -(-len(tickers_ol) // _BATCH), exc)
+            if i + _BATCH < len(tickers_ol):
+                time.sleep(_BATCH_SLEEP)
 
         candidates = []
         for sym in tickers_ol:
             try:
-                col = close[sym] if sym in close.columns else None
-                if col is None or col.dropna().empty:
+                col = all_close.get(sym, pd.Series()).dropna()
+                if col.empty:
                     continue
-                price = float(col.dropna().iloc[-1])
-                prev  = float(col.dropna().iloc[-2]) if len(col.dropna()) >= 2 else None
+                price = float(col.iloc[-1])
+                prev  = float(col.iloc[-2]) if len(col) >= 2 else None
                 if min_price <= price <= max_price:
                     ticker = sym.replace(".OL", "")
                     candidates.append({"symbol": sym, "ticker": ticker,
@@ -93,7 +104,7 @@ class YahooOsloScreener:
             except Exception as exc:
                 log.debug("info-feil %s: %s", sym, exc)
             results.append(sd)
-            time.sleep(0.3)
+            time.sleep(1.5)
         return results
 
     def apply_value_filter(self, stocks: list[StockData], thresholds: dict) -> list[StockData]:
@@ -136,7 +147,7 @@ class YahooOsloScreener:
                 sd.news = _parse_news_items(news_raw)
             except Exception:
                 pass
-            time.sleep(0.2)
+            time.sleep(1.0)
         return stocks
 
     def run(self, thresholds: dict, min_price: float = 5.0,

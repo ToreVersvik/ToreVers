@@ -20,7 +20,7 @@ _EXCHANGE_SUFFIX = {
     "HEL": ".HE",
     "US":  "",
 }
-_RATE_SLEEP = 0.5
+_RATE_SLEEP = 2.0
 
 
 class YahooDataSource(DataSource):
@@ -33,44 +33,48 @@ class YahooDataSource(DataSource):
         sym = self._yf_sym(ticker, exchange)
         sd = StockData(ticker=ticker, name=name or ticker, exchange=exchange,
                        currency=currency, ask_eligible=ask_eligible, source="yahoo")
-        try:
-            t = yf.Ticker(sym)
+        for attempt in range(3):
+            try:
+                t = yf.Ticker(sym)
 
-            # Kurs
-            fi = t.fast_info
-            sd.price = _nn(fi.last_price)
-            sd.prev_close = _nn(fi.previous_close)
-            sd.market_cap = _nn(getattr(fi, "market_cap", None))
+                # Kurs
+                fi = t.fast_info
+                sd.price = _nn(fi.last_price)
+                sd.prev_close = _nn(fi.previous_close)
+                sd.market_cap = _nn(getattr(fi, "market_cap", None))
 
-            # Nøkkeltall
-            info = t.info
-            sd.pe_ratio     = _nn(info.get("trailingPE") or info.get("forwardPE"))
-            sd.pb_ratio     = _nn(info.get("priceToBook"))
-            sd.ps_ratio     = _nn(info.get("priceToSalesTrailing12Months"))
-            ev = _nn(info.get("enterpriseToEbitda"))
-            sd.ev_ebitda    = ev if (ev is not None and 0 < ev <= 50) else None
-            dy = _nn(info.get("dividendYield"))
-            sd.dividend_yield = dy if (dy is not None and dy <= 1.0) else None
-            sd.roe          = _nn(info.get("returnOnEquity"))
-            fcf = info.get("freeCashflow")
-            if fcf:
-                sd.free_cash_flow = float(fcf) / 1e6
-            dte = info.get("debtToEquity")
-            if dte:
-                sd.debt_to_equity = float(dte) / 100
-            sd.analyst_target_price = _nn(info.get("targetMeanPrice"))
-            rec = (info.get("recommendationKey") or "").lower()
-            if "buy" in rec:
-                sd.analyst_rating = "Kjøp"
-            elif "sell" in rec:
-                sd.analyst_rating = "Selg"
-            elif rec == "hold":
-                sd.analyst_rating = "Hold"
+                # Nøkkeltall
+                info = t.info
+                sd.pe_ratio     = _nn(info.get("trailingPE") or info.get("forwardPE"))
+                sd.pb_ratio     = _nn(info.get("priceToBook"))
+                sd.ps_ratio     = _nn(info.get("priceToSalesTrailing12Months"))
+                ev = _nn(info.get("enterpriseToEbitda"))
+                sd.ev_ebitda    = ev if (ev is not None and 0 < ev <= 50) else None
+                dy = _nn(info.get("dividendYield"))
+                sd.dividend_yield = dy if (dy is not None and dy <= 1.0) else None
+                sd.roe          = _nn(info.get("returnOnEquity"))
+                fcf = info.get("freeCashflow")
+                if fcf:
+                    sd.free_cash_flow = float(fcf) / 1e6
+                dte = info.get("debtToEquity")
+                if dte:
+                    sd.debt_to_equity = float(dte) / 100
+                sd.analyst_target_price = _nn(info.get("targetMeanPrice"))
+                rec = (info.get("recommendationKey") or "").lower()
+                if "buy" in rec:
+                    sd.analyst_rating = "Kjøp"
+                elif "sell" in rec:
+                    sd.analyst_rating = "Selg"
+                elif rec == "hold":
+                    sd.analyst_rating = "Hold"
 
-            sd.news = _parse_news_items(t.news)
-        except Exception as exc:
-            log.warning("Yahoo-feil for %s: %s", sym, exc)
-            sd.fetch_error = str(exc)
+                sd.news = _parse_news_items(t.news)
+                break
+            except Exception as exc:
+                log.warning("Yahoo-feil for %s (forsøk %d/3): %s", sym, attempt + 1, exc)
+                sd.fetch_error = str(exc)
+                if attempt < 2:
+                    time.sleep(8.0)
 
         time.sleep(_RATE_SLEEP)
         return sd

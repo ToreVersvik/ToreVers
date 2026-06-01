@@ -149,9 +149,11 @@ def analyse_portfolio(stocks: list[StockData], thresholds: dict) -> str:
             alerts.append("\n".join(lines))
         time.sleep(0.3)
 
+    no_data = [s for s in stocks if not _has_data(s)]
+    footer = f"\n\n_⚠️ Mangler kursdata for {len(no_data)} aksje(r): {', '.join(s.ticker for s in no_data)}_" if no_data else ""
     if not alerts:
-        return f"✅ Ingen salgssignaler – alle {len(with_data)} aksjer OK"
-    return "\n\n".join(alerts)
+        return f"✅ Ingen salgssignaler – alle {len(with_data)} aksjer OK{footer}"
+    return "\n\n".join(alerts) + footer
 
 
 def find_undervalued_ideas(stocks: list[StockData], thresholds: dict) -> str:
