@@ -8,25 +8,9 @@
       "currency": "NOK",
       "ask_eligible": true,
       "shares_owned": 10,
+      "avg_cost": 118.46,
       "manual_data": {
-        "price": 4.25,
-        "pe_ratio": null,
-        "pb_ratio": null,
-        "ev_ebit": null,
-        "ev_ebitda": null,
-        "free_cash_flow": null,
-        "dividend_yield": null
-      }
-    },
-    {
-      "ticker": "BNOR",
-      "name": "BlueNord",
-      "exchange": "OSL",
-      "currency": "NOK",
-      "ask_eligible": true,
-      "shares_owned": 9,
-      "manual_data": {
-        "price": 542.0,
+        "price": 4.22,
         "pe_ratio": null,
         "pb_ratio": null,
         "ev_ebit": null,
@@ -42,8 +26,27 @@
       "currency": "NOK",
       "ask_eligible": true,
       "shares_owned": 5,
+      "avg_cost": 82.83,
       "manual_data": {
-        "price": 137.70,
+        "price": 138.5,
+        "pe_ratio": null,
+        "pb_ratio": null,
+        "ev_ebit": null,
+        "ev_ebitda": null,
+        "free_cash_flow": null,
+        "dividend_yield": null
+      }
+    },
+    {
+      "ticker": "BNOR",
+      "name": "BlueNord",
+      "exchange": "OSL",
+      "currency": "NOK",
+      "ask_eligible": true,
+      "shares_owned": 9,
+      "avg_cost": 547.05,
+      "manual_data": {
+        "price": 553.0,
         "pe_ratio": null,
         "pb_ratio": null,
         "ev_ebit": null,
@@ -58,26 +61,10 @@
       "exchange": "OSL",
       "currency": "NOK",
       "ask_eligible": true,
-      "shares_owned": 45,
+      "shares_owned": 70,
+      "avg_cost": 105.79,
       "manual_data": {
-        "price": 96.70,
-        "pe_ratio": null,
-        "pb_ratio": null,
-        "ev_ebit": null,
-        "ev_ebitda": null,
-        "free_cash_flow": null,
-        "dividend_yield": null
-      }
-    },
-    {
-      "ticker": "OTELLO",
-      "name": "Otello Corporation",
-      "exchange": "OSL",
-      "currency": "NOK",
-      "ask_eligible": true,
-      "shares_owned": 83,
-      "manual_data": {
-        "price": 18.20,
+        "price": 98.35,
         "pe_ratio": null,
         "pb_ratio": null,
         "ev_ebit": null,
@@ -92,9 +79,10 @@
       "exchange": "OSL",
       "currency": "NOK",
       "ask_eligible": true,
-      "shares_owned": 6,
+      "shares_owned": 13,
+      "avg_cost": 194.10,
       "manual_data": {
-        "price": 188.24,
+        "price": 184.42,
         "pe_ratio": null,
         "pb_ratio": null,
         "ev_ebit": null,
@@ -110,8 +98,27 @@
       "currency": "NOK",
       "ask_eligible": true,
       "shares_owned": 61,
+      "avg_cost": 32.62,
       "manual_data": {
-        "price": 47.0,
+        "price": 47.36,
+        "pe_ratio": null,
+        "pb_ratio": null,
+        "ev_ebit": null,
+        "ev_ebitda": null,
+        "free_cash_flow": null,
+        "dividend_yield": null
+      }
+    },
+    {
+      "ticker": "OTELLO",
+      "name": "Otello Corporation",
+      "exchange": "OSL",
+      "currency": "NOK",
+      "ask_eligible": true,
+      "shares_owned": 83,
+      "avg_cost": 18.29,
+      "manual_data": {
+        "price": 17.48,
         "pe_ratio": null,
         "pb_ratio": null,
         "ev_ebit": null,
