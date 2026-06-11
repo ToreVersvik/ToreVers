@@ -18,9 +18,13 @@ def run_weekly(portfolio: list[StockData], watchlist: list[StockData], threshold
     log.info("Analyserer portefølje (%d aksjer)…", len(portfolio))
     s1 = claude_analyst.analyse_portfolio(portfolio, thresholds)
 
-    top_watchlist = watchlist[:10]
-    log.info("Søker etter kjøpsideer (%d av %d kandidater)…",
-             len(top_watchlist), len(watchlist))
+    # Ekskluder aksjer man allerede eier fra kjøpsideer
+    owned_tickers = {s.ticker for s in portfolio}
+    ideas_candidates = [s for s in watchlist if s.ticker not in owned_tickers]
+
+    top_watchlist = ideas_candidates[:15]
+    log.info("Søker etter kjøpsideer (%d av %d kandidater, %d ekskludert som allerede eid)…",
+             len(top_watchlist), len(watchlist), len(watchlist) - len(ideas_candidates))
     s2 = claude_analyst.find_undervalued_ideas(top_watchlist, thresholds)
 
     log.info("Henter nyhetsdigest…")

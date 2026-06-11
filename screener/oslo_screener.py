@@ -135,7 +135,13 @@ class YahooOsloScreener:
             if hits >= min(2, tests):
                 scored.append((hits, sd.pe_ratio or 999.0, sd))
 
-        scored.sort(key=lambda x: (-x[0], x[1]))  # flest kriterier først, lavest P/E som tiebreaker
+        # Sortering: flest kriterier → størst daglig kursfall (nytt kjøpsmulighet) → lavest P/E
+        def _day_drop(sd: StockData) -> float:
+            if sd.price and sd.prev_close and sd.prev_close > 0:
+                return (sd.price - sd.prev_close) / sd.prev_close  # negativt = kursfall
+            return 0.0
+
+        scored.sort(key=lambda x: (-x[0], _day_drop(x[2]), x[1]))
         passed = [sd for _, _, sd in scored]
         log.info("Verdiscreening: %d av %d kandidater passerte.", len(passed), len(stocks))
         return passed
