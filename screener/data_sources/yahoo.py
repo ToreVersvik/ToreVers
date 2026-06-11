@@ -69,6 +69,24 @@ class YahooDataSource(DataSource):
                     sd.analyst_rating = "Hold"
 
                 sd.news = _parse_news_items(t.news)
+
+                # Tekniske indikatorer fra prishistorikk
+                try:
+                    hist = t.history(period="1y")
+                    if not hist.empty and len(hist) >= 14:
+                        closes = hist["Close"]
+                        sd.week52_high = float(closes.max())
+                        sd.week52_low  = float(closes.min())
+                        if len(closes) >= 50:
+                            sd.sma50 = float(closes.iloc[-50:].mean())
+                        if len(closes) >= 200:
+                            sd.sma200 = float(closes.iloc[-200:].mean())
+                        sd.rsi14 = _calc_rsi(closes, 14)
+                        if "Volume" in hist.columns and len(hist) >= 30:
+                            sd.avg_volume_30d = float(hist["Volume"].iloc[-30:].mean())
+                except Exception:
+                    pass
+
                 break
             except Exception as exc:
                 log.warning("Yahoo-feil for %s (forsøk %d/3): %s", sym, attempt + 1, exc)
@@ -135,6 +153,19 @@ def _parse_news_items(news_list) -> list[dict]:
         if len(result) == 10:
             break
     return result
+
+
+def _calc_rsi(closes: "pd.Series", period: int = 14) -> Optional[float]:
+    try:
+        delta = closes.diff().dropna()
+        gain = delta.clip(lower=0).rolling(period).mean()
+        loss = (-delta.clip(upper=0)).rolling(period).mean()
+        rs = gain / loss.replace(0, float("nan"))
+        rsi = 100 - (100 / (1 + rs))
+        val = float(rsi.iloc[-1])
+        return val if val == val else None
+    except Exception:
+        return None
 
 
 def _nn(val) -> Optional[float]:

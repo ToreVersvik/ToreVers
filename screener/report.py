@@ -33,7 +33,7 @@ def run_weekly(portfolio: list[StockData], watchlist: list[StockData], threshold
     body = (
         f"\U0001f4c5 *Ukentlig rapport {today}*\n\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"\U0001f4ca *PORTEFØLJE – SALGSSIGNALER*\n"
+        f"\U0001f4ca *PORTEFØLJE*\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"{s1}\n\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"

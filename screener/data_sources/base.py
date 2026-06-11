@@ -9,7 +9,7 @@ from typing import Optional
 
 @dataclass
 class StockData:
-    """Alle tall er None hvis kilden mangler dem – aldri gjetr."""
+    """Alle tall er None hvis kilden mangler dem – aldri gjett."""
     ticker: str
     name: str
     exchange: str
@@ -32,6 +32,14 @@ class StockData:
 
     analyst_target_price: Optional[float] = None
     analyst_rating: Optional[str] = None
+
+    # Tekniske indikatorer (beregnet fra prishistorikk i kode)
+    sma50: Optional[float] = None
+    sma200: Optional[float] = None
+    rsi14: Optional[float] = None
+    week52_high: Optional[float] = None
+    week52_low: Optional[float] = None
+    avg_volume_30d: Optional[float] = None
 
     news: list = field(default_factory=list)
 
