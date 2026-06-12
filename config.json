@@ -138,7 +138,7 @@
   },
   "thresholds": {
     "_comment": "Daglig: varsle hvis kurs faller mer enn X% eller stiger mer enn Y% fra forrige stengedag",
-    "price_drop_pct": 5.0,
+    "price_drop_pct": 7.0,
     "price_rise_pct": 8.0,
     "pe_ratio_max": 20.0,
     "pb_ratio_max": 1.5,

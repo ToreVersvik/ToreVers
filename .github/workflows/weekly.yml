@@ -1,14 +1,7 @@
 name: Ukentlig aksjerapport
 
 on:
-  # Spredt over mandag morgen UTC for å sikre at minst én trigges
-  # GitHub Actions schedule er upålitelig – flere entries øker sjansen
-  schedule:
-    - cron: "30 5 * * 1"   # 05:30 UTC = 07:30 CEST
-    - cron: "30 6 * * 1"   # 06:30 UTC = 08:30 CEST
-    - cron: "30 7 * * 1"   # 07:30 UTC = 09:30 CEST
-    - cron: "30 8 * * 1"   # 08:30 UTC = 10:30 CEST
-  workflow_dispatch:
+  workflow_dispatch:  # Trigges av cron-job.org via GitHub API
 
 jobs:
   report:

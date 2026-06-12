@@ -1,14 +1,7 @@
 name: Daglig aksjescreening
 
 on:
-  # Spredt over ettermiddagen UTC for å sikre at minst én trigges
-  # GitHub Actions schedule er upålitelig – flere entries øker sjansen
-  schedule:
-    - cron: "30 13 * * 1-5"   # 13:30 UTC = 15:30 CEST
-    - cron: "30 14 * * 1-5"   # 14:30 UTC = 16:30 CEST
-    - cron: "30 15 * * 1-5"   # 15:30 UTC = 17:30 CEST
-    - cron: "30 16 * * 1-5"   # 16:30 UTC = 18:30 CEST
-  workflow_dispatch:            # manuell kjøring fra GitHub UI
+  workflow_dispatch:  # Trigges av cron-job.org via GitHub API
 
 jobs:
   screen:
