@@ -13,7 +13,7 @@ on:
 jobs:
   screen:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
 
     steps:
       - name: Sjekk ut kode
@@ -30,7 +30,8 @@ jobs:
 
       - name: Kjør daglig screening
         env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          # ANTHROPIC_API_KEY ikke nødvendig for daglig modus
+          CLAUDE_MODEL: "claude-sonnet-4-6"
         run: python run_daily.py

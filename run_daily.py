@@ -41,6 +41,8 @@ def main() -> int:
         stocks=stocks,
         thresholds=config.get("thresholds", {}),
         cooldown_hours=config.get("cooldown_hours", 24.0),
+        full_source=source,
+        stocks_cfg=all_stocks_cfg,
     )
     log.info("Ferdig. %d varsel(er) sendt.", sent)
     return 0
