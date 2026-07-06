@@ -225,18 +225,19 @@ def analyse_portfolio(stocks: list[StockData], thresholds: dict) -> str:
 
 
 def find_undervalued_ideas(stocks: list[StockData], thresholds: dict) -> str:
-    """Returnerer kun Kjøp/Sterkt kjøp, maks 5, i kompakt format."""
+    """Returnerer topp 5 etter score, blant alle kandidater med Kjøp/Sterkt kjøp."""
     candidates = [sd for sd in stocks if sd.price is not None]
     if not candidates:
         return "_Ingen kandidater med kursdata._"
 
-    buys = []
+    log.info("Evaluerer %d kjøpskandidat(er) med Claude…", len(candidates))
+    all_scored = []
     for sd in candidates:
         result = _analyse_stock(sd, mode="idea")
         rec = result["rec"].lower()
         if rec in _BUY_RECS:
             emoji = "🟢" if rec == "sterkt kjøp" else "✅"
-            score = result.get("score")
+            score = result.get("score") or 0
             lines = [f"{emoji} *{sd.name}* ({sd.ticker})"
                      f"{f' – Score {score}' if score else ''} – {result['rec']}"]
             m = _key_metrics(sd)
@@ -248,16 +249,17 @@ def find_undervalued_ideas(stocks: list[StockData], thresholds: dict) -> str:
                 lines.append(f"Oppside: {result['oppside']}")
             if not sd.ask_eligible:
                 lines.append("⚠️ Kun utenfor ASK")
-            buys.append((result.get("score") or 0, "\n".join(lines)))
+            all_scored.append((score, "\n".join(lines)))
         time.sleep(0.3)
-        if len(buys) >= 5:
-            break
 
-    if not buys:
+    log.info("Kjøpsideer: %d av %d kandidater fikk Kjøp/Sterkt kjøp.", len(all_scored), len(candidates))
+
+    if not all_scored:
         return "_Ingen kjøpsideer passerte kriteriene denne uken._"
 
-    buys.sort(key=lambda x: -x[0])
-    return "\n\n".join(text for _, text in buys)
+    all_scored.sort(key=lambda x: -x[0])
+    top5 = all_scored[:5]
+    return "\n\n".join(text for _, text in top5)
 
 
 def news_digest(stocks: list[StockData]) -> str:
@@ -275,22 +277,32 @@ def news_digest(stocks: list[StockData]) -> str:
     }
 
     prompt = (
-        "Finansanalytiker. Nyheter siste 7 dager – kun tese-relevante (resultat, utbytte, "
-        "regulatorisk, oppkjøp). Ignorer generell markedskommentar.\n"
-        "Format per aksje: *Ticker* – én setning om effekt (merket som tolkning).\n"
-        "Maks 2 nyheter per aksje. Svar på norsk. Vær kort.\n\n"
+        "Nyheter siste 7 dager for disse aksjene. Skriv KUN ren tekst – INGEN JSON.\n"
+        "Format: én linje per aksje med tese-relevante nyheter (resultat, utbytte, regulatorisk, oppkjøp).\n"
+        "Ignorer generell markedskommentar og prisanalyser.\n"
+        "Hvis ingen tese-relevante nyheter: hopp over aksjen.\n"
+        "Maks 2 nyheter per aksje. Svar på norsk. Vær konkret.\n\n"
         f"{json.dumps(news_payload, ensure_ascii=False)}"
     )
-    return _call_claude(prompt, max_tokens=600)
+    return _call_claude(prompt, max_tokens=600, system=_NEWS_SYSTEM)
 
 
-def _call_claude(prompt: str, max_tokens: int = 300) -> str:
+_NEWS_SYSTEM = (
+    "Du er en finansanalytiker. Skriv korte, faktabaserte nyhetssammendrag på norsk. "
+    "Svar med ren tekst, IKKE JSON. "
+    "Format: én linje per aksje: *Ticker* – effekt på investeringstesen (maks 20 ord). "
+    "Inkluder kun tese-relevante nyheter (resultat, utbytte, regulatorisk, oppkjøp). "
+    "Ignorer generell markedskommentar. Vær konkret og kortfattet."
+)
+
+
+def _call_claude(prompt: str, max_tokens: int = 300, system: str = "") -> str:
     try:
         client = _get_client()
         response = client.messages.create(
             model=_MODEL,
             max_tokens=max_tokens,
-            system=_SYSTEM_PROMPT,
+            system=system or _SYSTEM_PROMPT,
             messages=[{"role": "user", "content": prompt}],
         )
         return response.content[0].text.strip()

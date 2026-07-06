@@ -20,15 +20,16 @@ def run_weekly(portfolio: list[StockData], watchlist: list[StockData], threshold
 
     # Ekskluder aksjer man allerede eier fra kjøpsideer
     owned_tickers = {s.ticker for s in portfolio}
+    excluded = [s.ticker for s in watchlist if s.ticker in owned_tickers]
     ideas_candidates = [s for s in watchlist if s.ticker not in owned_tickers]
-
-    top_watchlist = ideas_candidates[:15]
-    log.info("Søker etter kjøpsideer (%d av %d kandidater, %d ekskludert som allerede eid)…",
-             len(top_watchlist), len(watchlist), len(watchlist) - len(ideas_candidates))
-    s2 = claude_analyst.find_undervalued_ideas(top_watchlist, thresholds)
+    if excluded:
+        log.info("Ekskludert fra kjøpsideer (allerede eid): %s", ", ".join(excluded))
+    log.info("Søker etter kjøpsideer blant %d kandidater (%d ekskludert som allerede eid)…",
+             len(ideas_candidates), len(excluded))
+    s2 = claude_analyst.find_undervalued_ideas(ideas_candidates, thresholds)
 
     log.info("Henter nyhetsdigest…")
-    s3 = claude_analyst.news_digest(portfolio + top_watchlist)
+    s3 = claude_analyst.news_digest(portfolio + ideas_candidates[:10])
 
     body = (
         f"\U0001f4c5 *Ukentlig rapport {today}*\n\n"
