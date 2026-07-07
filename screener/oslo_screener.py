@@ -92,6 +92,7 @@ class YahooOsloScreener:
             try:
                 info = yf.Ticker(sym).info
                 sd.name         = info.get("longName") or info.get("shortName") or c["ticker"]
+                sd.market_cap   = _nn(info.get("marketCap"))
                 sd.pe_ratio     = _nn(info.get("trailingPE") or info.get("forwardPE"))
                 sd.pb_ratio     = _nn(info.get("priceToBook"))
                 ev = _nn(info.get("enterpriseToEbitda"))
@@ -99,6 +100,7 @@ class YahooOsloScreener:
                 dy = _nn(info.get("dividendYield"))
                 sd.dividend_yield = dy if (dy is not None and dy <= 1.0) else None
                 sd.roe          = _nn(info.get("returnOnEquity"))
+                sd.analyst_target_price = _nn(info.get("targetMeanPrice"))
                 fcf = info.get("freeCashflow")
                 if fcf:
                     sd.free_cash_flow = float(fcf) / 1e6

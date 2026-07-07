@@ -135,12 +135,21 @@ def _analyse_stock(sd: StockData, mode: str) -> dict:
         json_tmpl = ('{"score": 0-100, "rec": "BEHOLD|FØLG NØYE|REDUSER|SELG", '
                      '"grunn": "maks 15 ord", "tiltak": "maks 10 ord eller null"}')
         rec_opts = "BEHOLD|FØLG NØYE|REDUSER|SELG"
+        framing = ""
     else:
         json_tmpl = ('{"score": 0-100, "rec": "Sterkt kjøp|Kjøp|Hold|Avvent|Unngå", '
                      '"grunn": "maks 15 ord", "oppside": "spenn f.eks +10-30%"}')
         rec_opts = "Sterkt kjøp|Kjøp|Hold|Avvent|Unngå"
+        framing = (
+            "Dette er et VERDI-idéscreen: mål er undervurderte aksjer med margin of safety "
+            "og oppside, ikke bare de tryggeste store selskapene. Mindre og sykliske selskaper "
+            "er akseptable dersom verdsettelsen er lav og kontantstrøm/balanse er intakt. "
+            "Men avvis tydelige VERDIFELLER (fallende inntjening, uholdbar gjeld, strukturell "
+            "nedgang) – billig alene er ikke nok.\n"
+        )
 
     prompt = (
+        f"{framing}"
         f"Analyser denne aksjen og svar KUN med JSON:\n{json_tmpl}\n"
         f"rec må være én av: {rec_opts}\n\n"
         f"Verifiserte tall:\n{verified}\n{ask_txt}."
@@ -164,12 +173,78 @@ def _analyse_stock(sd: StockData, mode: str) -> dict:
 def _key_metrics(sd: StockData) -> str:
     bits = []
     if sd.price:          bits.append(f"Kurs {sd.price:.1f}")
+    if sd.market_cap:     bits.append(f"Mcap {_fmt_mcap(sd.market_cap)}")
     if sd.pe_ratio:       bits.append(f"P/E {sd.pe_ratio:.1f}")
     if sd.pb_ratio:       bits.append(f"P/B {sd.pb_ratio:.2f}")
     if sd.ev_ebitda:      bits.append(f"EV/EBITDA {sd.ev_ebitda:.1f}")
     if sd.free_cash_flow: bits.append(f"FCF {sd.free_cash_flow:.0f}M")
+    up = _upside_to_target(sd)
+    if up is not None:    bits.append(f"→ mål {up*100:+.0f}%")
     if sd.rsi14:          bits.append(f"RSI {sd.rsi14:.0f}")
     return " · ".join(bits)
+
+
+def _fmt_mcap(mcap: float) -> str:
+    """Markedsverdi i mrd/mill NOK, kort format."""
+    if mcap >= 1e9:
+        return f"{mcap/1e9:.1f}mrd"
+    return f"{mcap/1e6:.0f}M"
+
+
+def _upside_to_target(sd: StockData) -> Optional[float]:
+    """Verifisert oppside til analytikermål (andel), None hvis mangler."""
+    if sd.analyst_target_price and sd.price and sd.price > 0:
+        return (sd.analyst_target_price - sd.price) / sd.price
+    return None
+
+
+def _value_score(sd: StockData) -> float:
+    """Kode-beregnet verdiscore: belønner billighet + oppside + mindre størrelse.
+    Høyere = mer attraktiv verdi. Alle input er verifiserte tall – ingen gjetning.
+    Brukes til å RANGERE kjøpsideer slik at de billigste/mest oppside-tunge
+    kommer først, i stedet for de største og tryggeste blue-chip-navnene."""
+    score = 0.0
+
+    # Billighet: P/E (lavere = bedre)
+    if sd.pe_ratio is not None and sd.pe_ratio > 0:
+        if sd.pe_ratio <= 8:     score += 3
+        elif sd.pe_ratio <= 12:  score += 2
+        elif sd.pe_ratio <= 18:  score += 1
+
+    # P/B (lavere = bedre)
+    if sd.pb_ratio is not None and sd.pb_ratio > 0:
+        if sd.pb_ratio <= 0.8:   score += 3
+        elif sd.pb_ratio <= 1.2: score += 2
+        elif sd.pb_ratio <= 1.5: score += 1
+
+    # EV/EBITDA (lavere = bedre)
+    if sd.ev_ebitda is not None and sd.ev_ebitda > 0:
+        if sd.ev_ebitda <= 4:    score += 3
+        elif sd.ev_ebitda <= 7:  score += 2
+        elif sd.ev_ebitda <= 10: score += 1
+
+    # Positiv fri kontantstrøm
+    if sd.free_cash_flow is not None and sd.free_cash_flow > 0:
+        score += 1
+
+    # Oppside til analytikermål (verifisert)
+    up = _upside_to_target(sd)
+    if up is not None:
+        if up >= 0.40:   score += 4
+        elif up >= 0.25: score += 3
+        elif up >= 0.15: score += 2
+        elif up >= 0.05: score += 1
+
+    # Utbytte (moderat bonus)
+    if sd.dividend_yield is not None and sd.dividend_yield >= 0.03:
+        score += 1
+
+    # Størrelse-tilt: mindre selskaper får bonus (større oppside over tid)
+    if sd.market_cap is not None:
+        if sd.market_cap < 2e9:     score += 2   # small cap (< 2 mrd NOK)
+        elif sd.market_cap < 20e9:  score += 1   # mid cap (2–20 mrd NOK)
+
+    return score
 
 
 _REC_EMOJI = {
@@ -225,21 +300,26 @@ def analyse_portfolio(stocks: list[StockData], thresholds: dict) -> str:
 
 
 def find_undervalued_ideas(stocks: list[StockData], thresholds: dict) -> str:
-    """Returnerer topp 5 etter score, blant alle kandidater med Kjøp/Sterkt kjøp."""
+    """Rangerer kjøpsideer etter KODE-BEREGNET verdiscore (billighet + oppside +
+    størrelse), ikke etter kvalitet. Slik surfacet de billigste/mest oppside-tunge
+    ideene – der man historisk tjener mest – i stedet for de samme blue-chip-navnene.
+    Claude VETER hver kandidat (Kjøp/Hold/Unngå) for å luke ut verdifeller."""
     candidates = [sd for sd in stocks if sd.price is not None]
     if not candidates:
         return "_Ingen kandidater med kursdata._"
 
-    log.info("Evaluerer %d kjøpskandidat(er) med Claude…", len(candidates))
-    all_scored = []
-    for sd in candidates:
+    # Rangér etter kode-beregnet verdiscore – billigst/mest oppside først
+    ranked = sorted(candidates, key=_value_score, reverse=True)
+    log.info("Evaluerer %d kjøpskandidat(er) med Claude, rangert etter verdiscore…", len(ranked))
+
+    buys = []
+    for sd in ranked:
+        vscore = _value_score(sd)
         result = _analyse_stock(sd, mode="idea")
         rec = result["rec"].lower()
         if rec in _BUY_RECS:
             emoji = "🟢" if rec == "sterkt kjøp" else "✅"
-            score = result.get("score") or 0
-            lines = [f"{emoji} *{sd.name}* ({sd.ticker})"
-                     f"{f' – Score {score}' if score else ''} – {result['rec']}"]
+            lines = [f"{emoji} *{sd.name}* ({sd.ticker}) – {result['rec']}"]
             m = _key_metrics(sd)
             if m:
                 lines.append(m)
@@ -249,17 +329,20 @@ def find_undervalued_ideas(stocks: list[StockData], thresholds: dict) -> str:
                 lines.append(f"Oppside: {result['oppside']}")
             if not sd.ask_eligible:
                 lines.append("⚠️ Kun utenfor ASK")
-            all_scored.append((score, "\n".join(lines)))
+            buys.append((vscore, "\n".join(lines)))
+            log.info("  KJØP: %s (verdiscore %.0f, %s)", sd.ticker, vscore, result["rec"])
         time.sleep(0.3)
 
-    log.info("Kjøpsideer: %d av %d kandidater fikk Kjøp/Sterkt kjøp.", len(all_scored), len(candidates))
+    log.info("Kjøpsideer: %d av %d kandidater fikk Kjøp/Sterkt kjøp.", len(buys), len(ranked))
 
-    if not all_scored:
+    if not buys:
         return "_Ingen kjøpsideer passerte kriteriene denne uken._"
 
-    all_scored.sort(key=lambda x: -x[0])
-    top5 = all_scored[:5]
-    return "\n\n".join(text for _, text in top5)
+    # Vis de 6 med høyest verdiscore blant kjøpsanbefalingene
+    buys.sort(key=lambda x: -x[0])
+    top = buys[:6]
+    header = "_Rangert etter verdi (billighet + oppside + størrelse), ikke kvalitet._\n"
+    return header + "\n\n".join(text for _, text in top)
 
 
 def news_digest(stocks: list[StockData]) -> str:
