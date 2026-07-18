@@ -323,6 +323,22 @@ h1 { font-size: 1.6rem; margin: 0.2rem 0; }
 }
 .melding-tekst { margin: 0; white-space: pre-wrap; line-height: 1.5; }
 
+/* Innlogging / logg ut */
+.logout-form { margin-left: auto; }
+.topbar .logout-form .lenke-knapp {
+    color: var(--dempet);
+    font-weight: 500;
+}
+.topbar .logout-form .lenke-knapp:hover { color: var(--tekst); }
+
+.login-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 3rem;
+}
+.login-skjema { width: 100%; max-width: 360px; }
+.login-skjema h1 { margin-bottom: 0.2rem; }
+
 footer {
     text-align: center;
     color: var(--dempet);

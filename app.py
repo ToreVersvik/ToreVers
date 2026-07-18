@@ -10,20 +10,87 @@ Fase 2:
   - Matching: gitt en ledig dag, foreslå person (lengst siden kontakt +
     relevante interesser) og passende aktivitet, som ferdig utfylt melding
 """
+import hmac
+import os
+import secrets
 from datetime import date, datetime
 
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import (Flask, flash, redirect, render_template, request, session,
+                   url_for)
 
 import db
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "hold-kontakten-lokal-dev"  # kun for lokal flash-melding
+
+# Hemmelig nøkkel for signering av innloggingscookien. Sett SECRET_KEY som
+# miljøvariabel når appen hostes, så beholder du innloggingen mellom omstarter.
+# Lokalt er en tilfeldig nøkkel helt fint.
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
+
+# Passord for tilgang. Er den ikke satt, er appen åpen (praktisk lokalt,
+# «ingen innlogging»). Setter du HOLD_KONTAKTEN_PASSORD – f.eks. når du hoster
+# på internett – kreves passordet før du slipper inn.
+APP_PASSORD = os.environ.get("HOLD_KONTAKTEN_PASSORD", "")
 
 db.init_app(app)
+# Sørg for at tabellene finnes, også når appen startes av en produksjonsserver
+# (gunicorn) som ikke kjører __main__-blokka nederst.
+with app.app_context():
+    db.init_db()
 
 RELASJONER = ["venn", "familie", "kollega"]
 TIDSPUNKTER = ["dag", "kveld", "helg"]
 STATUSER = ["ledig", "opptatt"]
+
+
+# ---------------------------------------------------------------------------
+# Innlogging (aktiv kun når HOLD_KONTAKTEN_PASSORD er satt)
+# ---------------------------------------------------------------------------
+# Sider som er tilgjengelige uten å være logget inn.
+AAPNE_ENDEPUNKTER = {"login", "static"}
+
+
+@app.before_request
+def krev_innlogging():
+    if not APP_PASSORD:
+        return  # ingen passord satt – appen er åpen (lokal bruk)
+    if request.endpoint in AAPNE_ENDEPUNKTER:
+        return
+    if session.get("innlogget"):
+        return
+    return redirect(url_for("login", neste=request.path))
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    # Er appen åpen, eller allerede innlogget, er det ingen grunn til login-siden.
+    if not APP_PASSORD or session.get("innlogget"):
+        return redirect(url_for("dashboard"))
+    if request.method == "POST":
+        oppgitt = request.form.get("passord", "")
+        if hmac.compare_digest(oppgitt, APP_PASSORD):
+            session["innlogget"] = True
+            session.permanent = True
+            neste = request.args.get("neste") or url_for("dashboard")
+            # Kun tillat interne stier (unngå åpen redirect).
+            if not neste.startswith("/"):
+                neste = url_for("dashboard")
+            return redirect(neste)
+        flash("Feil passord.", "feil")
+    return render_template("login.html")
+
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    session.clear()
+    flash("Du er logget ut.", "ok")
+    return redirect(url_for("login"))
+
+
+@app.context_processor
+def injiser_auth():
+    """Gjør innloggingsstatus tilgjengelig i alle maler (for logg ut-knappen)."""
+    return {"auth_paa": bool(APP_PASSORD), "innlogget": session.get("innlogget", False)}
 
 
 # ---------------------------------------------------------------------------
@@ -474,5 +541,8 @@ def forslag():
 
 
 if __name__ == "__main__":
-    db.init_db()
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    # Lokal kjøring. HOST=0.0.0.0 lar andre enheter på samme WiFi nå appen;
+    # ellers kun denne maskinen. PORT kan overstyres via miljøvariabel.
+    host = os.environ.get("HOST", "127.0.0.1")
+    port = int(os.environ.get("PORT", "5000"))
+    app.run(host=host, port=port, debug=True)
