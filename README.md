@@ -4,7 +4,9 @@ Et enkelt verktøy for å huske å ta kontakt med folk. Kan kjøres helt lokalt
 (uten innlogging) eller hostes på internett med passordbeskyttelse, slik at du
 når den fra både mobil og PC.
 
-Bygget med **Flask + SQLite** (SQLite følger med Python, ingen database å sette opp).
+Bygget med **Flask**. Lokalt brukes **SQLite** (følger med Python, ingenting å
+sette opp); ved hosting brukes **PostgreSQL** automatisk hvis `DATABASE_URL` er
+satt, slik at dataene består.
 
 ## Kjøre lokalt
 
@@ -44,39 +46,48 @@ på nettverket.
 For å nå appen fra hvor som helst må den hostes. Siden dette er personlige data
 **skal du sette et passord** – da kreves innlogging før noen slipper inn.
 
+### Helt gratis, og dataene består
+
+Gratis hostingtjenester nullstiller filsystemet hver gang appen sover eller
+oppdateres. Da forsvinner kontaktlista di hvis den ligger i en SQLite-fil «løst»
+på serveren. Løsningen er å lagre dataene i en **gratis database utenfor**
+web-appen. Appen bruker automatisk PostgreSQL når miljøvariabelen `DATABASE_URL`
+er satt – ellers SQLite lokalt. Ingen kodeendring nødvendig.
+
+Gratis-oppskrift: **Render** (web-app) + **Neon** (database). Begge har ekte
+gratisnivåer, og til sammen koster det ingenting.
+
+**Steg 1 – lag en gratis database (Neon):**
+
+1. Lag konto på [neon.tech](https://neon.tech) (gratis).
+2. Opprett et prosjekt. Du får en **tilkoblingsstreng** som ser slik ut:
+   `postgresql://bruker:passord@ep-noe.eu-central-1.aws.neon.tech/neondb`
+3. Kopier den – du trenger den i steg 2.
+
+**Steg 2 – host web-appen gratis (Render):**
+
+1. Lag konto på [render.com](https://render.com) og koble til GitHub-kontoen din.
+2. Velg **New → Blueprint**, og pek på dette repoet. Render leser `render.yaml`.
+3. Når den spør, fyll inn:
+   - `HOLD_KONTAKTEN_PASSORD` = passordet du vil bruke for å logge inn.
+   - `DATABASE_URL` = tilkoblingsstrengen fra Neon.
+   - (`SECRET_KEY` lager Render selv.)
+4. Trykk deploy. Etter et par minutter får du en `https://…onrender.com`-adresse
+   du åpner på **både mobil og PC**. Tabellene opprettes automatisk første gang.
+
+> **Godt å vite:** Render sin gratisplan lar appen «sove» etter en stund uten
+> bruk, så første åpning kan ta 30–60 sekunder mens den våkner. Dataene i Neon
+> ligger trygt uansett.
+
 ### Miljøvariabler
 
 | Variabel                 | Hva den gjør |
 |--------------------------|--------------|
 | `HOLD_KONTAKTEN_PASSORD` | Passordet for å logge inn. **Settes den ikke, er appen åpen** (greit lokalt, men aldri ved hosting). |
+| `DATABASE_URL`           | Tilkoblingsstreng til PostgreSQL. Er den satt, brukes Postgres; ellers lokal SQLite-fil. |
 | `SECRET_KEY`             | Hemmelig nøkkel som signerer innloggingscookien. Sett en lang, tilfeldig verdi så du slipper å logge inn på nytt ved omstart. |
-| `DATABASE_PATH`          | Hvor databasefila skal ligge. Ved hosting **må** denne peke på en varig disk (se under). |
 | `PORT` / `HOST`          | Port og adresse. Hostingtjenester setter som regel `PORT` selv. |
-
-### Viktig: dataene må overleve omstart
-
-Mange hostingtjenester nullstiller filsystemet ved hver nye utrulling. Da vil
-kontaktlista di forsvinne hvis SQLite-fila ligger «løst». Løsningen er en
-**varig disk (volume)** som `DATABASE_PATH` peker inn i.
-
-### Enkleste vei: Render
-
-Repoet inneholder en ferdig `render.yaml`:
-
-1. Lag konto på [render.com](https://render.com) og koble til GitHub-kontoen din.
-2. Velg **New → Blueprint**, og pek på dette repoet. Render leser `render.yaml`.
-3. Fyll inn `HOLD_KONTAKTEN_PASSORD` (passordet du vil bruke) når den spør.
-4. Trykk deploy. Etter et par minutter får du en `https://…onrender.com`-adresse
-   du kan åpne på både mobil og PC.
-
-`render.yaml` setter opp en produksjonsserver (gunicorn), en tilfeldig
-`SECRET_KEY`, og en 1 GB varig disk montert på `/data` der databasen lagres.
-
-> **Merk:** varig disk krever Render sin «starter»-plan (betalt). Vil du teste
-> gratis først, kan du fjerne `disk`-blokka og `DATABASE_PATH` i `render.yaml` –
-> men da nullstilles dataene ved hver utrulling. Andre tjenester med gratis
-> volum (f.eks. Fly.io) fungerer også; da kjører du samme `gunicorn`-kommando
-> som i `Procfile`.
+| `DATABASE_PATH`          | (Kun SQLite) hvor databasefila skal ligge lokalt. |
 
 ### Produksjonsserver lokalt (for test)
 

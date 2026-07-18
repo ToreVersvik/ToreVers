@@ -1,20 +1,20 @@
-# Blueprint for hosting på Render (https://render.com).
+# Blueprint for gratis hosting på Render (https://render.com).
 # Importer repoet som «Blueprint», så leses denne fila automatisk.
+#
+# Gratisplanen har ikke varig disk, så dataene lagres i en gratis PostgreSQL-
+# database utenfor web-appen (f.eks. Neon – se README). Da er alt gratis OG
+# kontaktlista di overlever at appen sover eller oppdateres.
 services:
   - type: web
     name: hold-kontakten
     runtime: python
-    plan: starter            # «starter» kreves for varig disk (gratisplanen har ikke disk)
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2
     envVars:
       - key: HOLD_KONTAKTEN_PASSORD
-        sync: false           # du fyller inn passordet i Render sitt kontrollpanel
+        sync: false           # ditt eget passord – fylles inn i Render sitt panel
       - key: SECRET_KEY
         generateValue: true   # Render lager en tilfeldig, hemmelig nøkkel
-      - key: DATABASE_PATH
-        value: /data/hold_kontakten.db
-    disk:
-      name: data
-      mountPath: /data        # databasen ligger her og overlever omstart/utrulling
-      sizeGB: 1
+      - key: DATABASE_URL
+        sync: false           # lim inn tilkoblingsstrengen fra gratis-databasen (Neon)
