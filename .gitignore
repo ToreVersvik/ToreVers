@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+*.db
+hold_kontakten.db
+.venv/
+venv/

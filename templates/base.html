@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="nb">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block tittel %}Hold kontakten{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="topbar">
+        <a href="{{ url_for('dashboard') }}" class="logo">📇 Hold kontakten</a>
+        <nav>
+            <a href="{{ url_for('dashboard') }}"
+               class="{{ 'aktiv' if request.endpoint == 'dashboard' }}">Dashboard</a>
+            <a href="{{ url_for('personer') }}"
+               class="{{ 'aktiv' if request.endpoint and request.endpoint.startswith('person') }}">Personer</a>
+            <a href="{{ url_for('dager') }}"
+               class="{{ 'aktiv' if request.endpoint and request.endpoint.startswith('dag') }}">Ledige dager</a>
+        </nav>
+    </header>
+
+    <main>
+        {% with meldinger = get_flashed_messages(with_categories=true) %}
+            {% if meldinger %}
+                {% for kategori, melding in meldinger %}
+                    <div class="flash flash-{{ kategori }}">{{ melding }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block innhold %}{% endblock %}
+    </main>
+
+    <footer>
+        <small>Kjører lokalt · kun for deg</small>
+    </footer>
+</body>
+</html>

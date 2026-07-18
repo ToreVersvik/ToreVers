@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block tittel %}{{ tittel }} · Hold kontakten{% endblock %}
+
+{% block innhold %}
+<div class="side-topp">
+    <h1>{{ tittel }}</h1>
+    <a class="knapp sekundaer" href="{{ url_for('dager') }}">← Tilbake</a>
+</div>
+
+<form method="post" class="skjema">
+    <label>
+        Dato *
+        <input type="date" name="dato" value="{{ dag.get('dato', '') }}" required autofocus>
+    </label>
+
+    <label>
+        Tidspunkt *
+        <select name="tidspunkt" required>
+            {% for t in tidspunkter %}
+            <option value="{{ t }}" {{ 'selected' if dag.get('tidspunkt') == t }}>{{ t }}</option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <label>
+        Status *
+        <select name="status" required>
+            {% for s in statuser %}
+            <option value="{{ s }}" {{ 'selected' if dag.get('status', 'ledig') == s }}>{{ s }}</option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <div class="skjema-knapper">
+        <button type="submit" class="knapp">Lagre</button>
+        <a class="knapp sekundaer" href="{{ url_for('dager') }}">Avbryt</a>
+    </div>
+</form>
+{% endblock %}

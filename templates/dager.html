@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block tittel %}Ledige dager · Hold kontakten{% endblock %}
+
+{% block innhold %}
+<div class="side-topp">
+    <h1>Ledige dager</h1>
+    <a class="knapp" href="{{ url_for('dag_ny') }}">+ Ny ledig dag</a>
+</div>
+
+{% if dager %}
+<table class="tabell">
+    <thead>
+        <tr>
+            <th>Dato</th>
+            <th>Tidspunkt</th>
+            <th>Status</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for d in dager %}
+        <tr>
+            <td class="navn">{{ d['dato'] }}</td>
+            <td><span class="merke merke-tid">{{ d['tidspunkt'] }}</span></td>
+            <td><span class="merke merke-{{ d['status'] }}">{{ d['status'] }}</span></td>
+            <td class="handlinger">
+                <a href="{{ url_for('dag_rediger', dag_id=d['id']) }}">Rediger</a>
+                <form method="post" action="{{ url_for('dag_slett', dag_id=d['id']) }}"
+                      onsubmit="return confirm('Slette denne dagen?');">
+                    <button type="submit" class="lenke-knapp fare">Slett</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="tom">
+    <p>Ingen ledige dager lagt inn enda.</p>
+    <a class="knapp" href="{{ url_for('dag_ny') }}">Legg inn en ledig dag</a>
+</div>
+{% endif %}
+{% endblock %}

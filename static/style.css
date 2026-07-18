@@ -1,0 +1,241 @@
+:root {
+    --bg: #f4f5f7;
+    --kort: #ffffff;
+    --tekst: #1f2430;
+    --dempet: #6b7280;
+    --kant: #e3e6ea;
+    --primaer: #3b6ef5;
+    --primaer-mork: #2f57c4;
+    --ok-bg: #e5f6ed;
+    --ok-tekst: #1a7a48;
+    --feil-bg: #fdecec;
+    --feil-tekst: #c0392b;
+    --advarsel-bg: #fff7e6;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--tekst);
+    line-height: 1.5;
+}
+
+/* Topbar */
+.topbar {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    background: var(--kort);
+    padding: 0.9rem 1.5rem;
+    border-bottom: 1px solid var(--kant);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+.logo {
+    font-weight: 700;
+    font-size: 1.1rem;
+    text-decoration: none;
+    color: var(--tekst);
+}
+.topbar nav {
+    display: flex;
+    gap: 1.25rem;
+}
+.topbar nav a {
+    text-decoration: none;
+    color: var(--dempet);
+    font-weight: 500;
+    padding-bottom: 2px;
+    border-bottom: 2px solid transparent;
+}
+.topbar nav a:hover { color: var(--tekst); }
+.topbar nav a.aktiv {
+    color: var(--primaer);
+    border-bottom-color: var(--primaer);
+}
+
+/* Layout */
+main {
+    max-width: 960px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+}
+.side-topp {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+h1 { font-size: 1.6rem; margin: 0.2rem 0; }
+.undertekst { color: var(--dempet); margin-top: 0.2rem; }
+
+/* Flash */
+.flash {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    font-weight: 500;
+}
+.flash-ok { background: var(--ok-bg); color: var(--ok-tekst); }
+.flash-feil { background: var(--feil-bg); color: var(--feil-tekst); }
+
+/* Knapper */
+.knapp {
+    display: inline-block;
+    background: var(--primaer);
+    color: #fff;
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.knapp:hover { background: var(--primaer-mork); }
+.knapp.sekundaer {
+    background: transparent;
+    color: var(--dempet);
+    border: 1px solid var(--kant);
+}
+.knapp.sekundaer:hover { color: var(--tekst); background: #fff; }
+
+.lenke-knapp {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--primaer);
+    cursor: pointer;
+    font-size: inherit;
+    font-family: inherit;
+}
+.lenke-knapp.fare { color: var(--feil-tekst); }
+.lenke-knapp:hover { text-decoration: underline; }
+
+/* Tabell */
+.tabell {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--kort);
+    border: 1px solid var(--kant);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 1rem;
+}
+.tabell th, .tabell td {
+    text-align: left;
+    padding: 0.7rem 0.9rem;
+    border-bottom: 1px solid var(--kant);
+    vertical-align: top;
+}
+.tabell th {
+    background: #fafbfc;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--dempet);
+}
+.tabell tr:last-child td { border-bottom: none; }
+.tabell .navn { font-weight: 600; }
+.tabell tr.trenger-oppmerksomhet { background: var(--advarsel-bg); }
+
+.notater {
+    color: var(--dempet);
+    max-width: 220px;
+    font-size: 0.9rem;
+}
+
+.handlinger {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    white-space: nowrap;
+}
+.handlinger a { text-decoration: none; color: var(--primaer); }
+.handlinger a:hover { text-decoration: underline; }
+.handlinger form { display: inline; margin: 0; }
+
+/* Merker og tags */
+.merke {
+    display: inline-block;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    background: #eef1f5;
+    color: var(--dempet);
+}
+.merke-venn { background: #e3f0ff; color: #2f57c4; }
+.merke-familie { background: #ffe9e9; color: #c0392b; }
+.merke-kollega { background: #eafbe7; color: #1a7a48; }
+.merke-tid { background: #f0e9ff; color: #6b3fd0; }
+.merke-ledig { background: var(--ok-bg); color: var(--ok-tekst); }
+.merke-opptatt { background: #f0f1f3; color: var(--dempet); }
+
+.tags { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.tag {
+    background: #eef1f5;
+    color: #44506b;
+    padding: 0.1rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+}
+
+/* Skjema */
+.skjema {
+    background: var(--kort);
+    border: 1px solid var(--kant);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-top: 1rem;
+    max-width: 560px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.skjema label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+.skjema .hint { font-weight: 400; color: var(--dempet); font-size: 0.85rem; }
+.skjema input, .skjema select, .skjema textarea {
+    padding: 0.55rem 0.7rem;
+    border: 1px solid var(--kant);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    background: #fff;
+}
+.skjema input:focus, .skjema select:focus, .skjema textarea:focus {
+    outline: none;
+    border-color: var(--primaer);
+    box-shadow: 0 0 0 3px rgba(59, 110, 245, 0.15);
+}
+.skjema-knapper { display: flex; gap: 0.75rem; margin-top: 0.5rem; }
+
+/* Tom tilstand */
+.tom {
+    background: var(--kort);
+    border: 1px dashed var(--kant);
+    border-radius: 10px;
+    padding: 2.5rem;
+    text-align: center;
+    margin-top: 1rem;
+    color: var(--dempet);
+}
+.tom p { margin-bottom: 1rem; }
+
+footer {
+    text-align: center;
+    color: var(--dempet);
+    padding: 2rem 0;
+}

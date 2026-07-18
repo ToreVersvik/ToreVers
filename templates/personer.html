@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block tittel %}Personer · Hold kontakten{% endblock %}
+
+{% block innhold %}
+<div class="side-topp">
+    <h1>Personer</h1>
+    <a class="knapp" href="{{ url_for('person_ny') }}">+ Ny person</a>
+</div>
+
+{% if personer %}
+<table class="tabell">
+    <thead>
+        <tr>
+            <th>Navn</th>
+            <th>Relasjon</th>
+            <th>Interesser</th>
+            <th>Siste kontakt</th>
+            <th>Notater</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in personer %}
+        <tr>
+            <td class="navn">{{ p['navn'] }}</td>
+            <td><span class="merke merke-{{ p['relasjon'] }}">{{ p['relasjon'] }}</span></td>
+            <td class="tags">
+                {% for tag in p['interesser'].split(',') if tag.strip() %}
+                    <span class="tag">{{ tag.strip() }}</span>
+                {% endfor %}
+            </td>
+            <td>{{ p['siste_kontakt_dato'] or '—' }}</td>
+            <td class="notater">{{ p['notater'] or '' }}</td>
+            <td class="handlinger">
+                <a href="{{ url_for('person_rediger', person_id=p['id']) }}">Rediger</a>
+                <form method="post" action="{{ url_for('person_slett', person_id=p['id']) }}"
+                      onsubmit="return confirm('Slette {{ p['navn'] }}?');">
+                    <button type="submit" class="lenke-knapp fare">Slett</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="tom">
+    <p>Ingen personer enda.</p>
+    <a class="knapp" href="{{ url_for('person_ny') }}">Legg til din første person</a>
+</div>
+{% endif %}
+{% endblock %}
