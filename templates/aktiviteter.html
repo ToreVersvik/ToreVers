@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block tittel %}Aktiviteter · Hold kontakten{% endblock %}
+
+{% block innhold %}
+<div class="side-topp">
+    <h1>Aktivitetsforslag</h1>
+    <a class="knapp" href="{{ url_for('aktivitet_ny') }}">+ Nytt forslag</a>
+</div>
+<p class="undertekst">Aktiviteter du kan invitere folk til. Interesse-tags brukes til å matche mot personer.</p>
+
+{% if aktiviteter %}
+<table class="tabell">
+    <thead>
+        <tr>
+            <th>Tittel</th>
+            <th>Beskrivelse</th>
+            <th>Passer interesser</th>
+            <th>Meldingsmal</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for a in aktiviteter %}
+        <tr>
+            <td class="navn">{{ a['tittel'] }}</td>
+            <td class="notater">{{ a['beskrivelse'] or '' }}</td>
+            <td class="tags">
+                {% for tag in a['passer_interesser'].split(',') if tag.strip() %}
+                    <span class="tag">{{ tag.strip() }}</span>
+                {% endfor %}
+            </td>
+            <td class="notater mal">{{ a['meldingsmal'] or '' }}</td>
+            <td class="handlinger">
+                <a href="{{ url_for('aktivitet_rediger', aktivitet_id=a['id']) }}">Rediger</a>
+                <form method="post" action="{{ url_for('aktivitet_slett', aktivitet_id=a['id']) }}"
+                      onsubmit="return confirm('Slette «{{ a['tittel'] }}»?');">
+                    <button type="submit" class="lenke-knapp fare">Slett</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="tom">
+    <p>Ingen aktivitetsforslag enda.</p>
+    <a class="knapp" href="{{ url_for('aktivitet_ny') }}">Legg til ditt første forslag</a>
+</div>
+{% endif %}
+{% endblock %}

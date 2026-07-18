@@ -16,6 +16,10 @@
                class="{{ 'aktiv' if request.endpoint and request.endpoint.startswith('person') }}">Personer</a>
             <a href="{{ url_for('dager') }}"
                class="{{ 'aktiv' if request.endpoint and request.endpoint.startswith('dag') }}">Ledige dager</a>
+            <a href="{{ url_for('aktiviteter') }}"
+               class="{{ 'aktiv' if request.endpoint and request.endpoint.startswith('aktivitet') }}">Aktiviteter</a>
+            <a href="{{ url_for('forslag') }}"
+               class="{{ 'aktiv' if request.endpoint == 'forslag' }}">Forslag ✨</a>
         </nav>
     </header>
 

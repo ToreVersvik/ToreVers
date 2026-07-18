@@ -234,6 +234,95 @@ h1 { font-size: 1.6rem; margin: 0.2rem 0; }
 }
 .tom p { margin-bottom: 1rem; }
 
+/* Meldingsmal-forhåndsvisning i tabell */
+.mal {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.82rem;
+    max-width: 260px;
+    white-space: pre-wrap;
+}
+
+/* Dag-velger på forslagssiden */
+.dag-velger {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: var(--kort);
+    border: 1px solid var(--kant);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin: 1rem 0 1.5rem;
+}
+.dag-velger label { font-weight: 600; }
+.dag-velger select {
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--kant);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    background: #fff;
+    min-width: 280px;
+}
+
+/* Forslagskort */
+.kort-rutenett {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.25rem;
+}
+.forslag-kort {
+    background: var(--kort);
+    border: 1px solid var(--kant);
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    box-shadow: 0 1px 2px rgba(20, 30, 60, 0.04);
+}
+.kort-topp {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+.kort-topp h3 { margin: 0; font-size: 1.05rem; line-height: 1.35; font-weight: 600; }
+.uthev { color: var(--primaer); }
+.kort-dato { margin: 0; color: var(--dempet); font-size: 0.9rem; }
+
+.kort-meta { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.badge {
+    display: inline-block;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: #eef1f5;
+    color: #44506b;
+}
+.badge-varsel { background: var(--advarsel-bg); color: #a6650a; }
+.badge-match { background: #eafbe7; color: #1a7a48; }
+.badge-noytral { background: #f0f1f3; color: var(--dempet); font-weight: 500; }
+
+.kort-beskrivelse { margin: 0; color: var(--dempet); font-size: 0.9rem; }
+
+.melding-boks {
+    background: #f7f9fc;
+    border: 1px solid var(--kant);
+    border-radius: 8px;
+    padding: 0.75rem 0.9rem;
+    margin-top: auto;
+}
+.melding-topp {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--dempet);
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+}
+.melding-tekst { margin: 0; white-space: pre-wrap; line-height: 1.5; }
+
 footer {
     text-align: center;
     color: var(--dempet);

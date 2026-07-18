@@ -4,6 +4,11 @@ Fase 1:
   - Dashboard: personer sortert etter lengst tid siden siste kontakt
   - CRUD for personer
   - CRUD for ledige dager
+
+Fase 2:
+  - CRUD for aktivitetsforslag
+  - Matching: gitt en ledig dag, foreslå person (lengst siden kontakt +
+    relevante interesser) og passende aktivitet, som ferdig utfylt melding
 """
 from datetime import date, datetime
 
@@ -33,6 +38,30 @@ def dager_siden(iso_dato):
     except ValueError:
         return None
     return (date.today() - d).days
+
+
+def parse_tags(tekst):
+    """Gjør en kommaseparert streng til en liste med rensede, små tags."""
+    if not tekst:
+        return []
+    return [t.strip().lower() for t in tekst.split(",") if t.strip()]
+
+
+def fyll_melding(mal, navn, dato=None, aktivitet=None, tidspunkt=None):
+    """Fyll inn plassholdere i en meldingsmal. Støtter {navn}, {dato},
+    {aktivitet} og {tidspunkt}. Ukjente plassholdere lar vi stå."""
+    if not mal:
+        return ""
+    erstatninger = {
+        "navn": navn or "",
+        "dato": dato or "",
+        "aktivitet": aktivitet or "",
+        "tidspunkt": tidspunkt or "",
+    }
+    resultat = mal
+    for nokkel, verdi in erstatninger.items():
+        resultat = resultat.replace("{" + nokkel + "}", verdi)
+    return resultat
 
 
 app.jinja_env.filters["dager_siden"] = dager_siden
@@ -244,6 +273,204 @@ def _valider_dag(data):
     if data["status"] not in STATUSER:
         return "Velg en gyldig status."
     return None
+
+
+# ---------------------------------------------------------------------------
+# Aktivitetsforslag – CRUD
+# ---------------------------------------------------------------------------
+@app.route("/aktiviteter")
+def aktiviteter():
+    conn = db.get_db()
+    rader = conn.execute(
+        "SELECT * FROM aktivitetsforslag ORDER BY tittel ASC"
+    ).fetchall()
+    return render_template("aktiviteter.html", aktiviteter=rader)
+
+
+@app.route("/aktiviteter/ny", methods=["GET", "POST"])
+def aktivitet_ny():
+    if request.method == "POST":
+        data = _les_aktivitet_skjema()
+        feil = _valider_aktivitet(data)
+        if feil:
+            flash(feil, "feil")
+            return render_template("aktivitet_form.html", aktivitet=data,
+                                   tittel="Nytt aktivitetsforslag")
+        conn = db.get_db()
+        conn.execute(
+            """INSERT INTO aktivitetsforslag (tittel, beskrivelse, passer_interesser, meldingsmal)
+               VALUES (?, ?, ?, ?)""",
+            (data["tittel"], data["beskrivelse"], data["passer_interesser"],
+             data["meldingsmal"]),
+        )
+        conn.commit()
+        flash(f"La til «{data['tittel']}».", "ok")
+        return redirect(url_for("aktiviteter"))
+    return render_template("aktivitet_form.html", aktivitet={},
+                           tittel="Nytt aktivitetsforslag")
+
+
+@app.route("/aktiviteter/<int:aktivitet_id>/rediger", methods=["GET", "POST"])
+def aktivitet_rediger(aktivitet_id):
+    conn = db.get_db()
+    rad = conn.execute(
+        "SELECT * FROM aktivitetsforslag WHERE id = ?", (aktivitet_id,)
+    ).fetchone()
+    if rad is None:
+        flash("Fant ikke aktiviteten.", "feil")
+        return redirect(url_for("aktiviteter"))
+
+    if request.method == "POST":
+        data = _les_aktivitet_skjema()
+        feil = _valider_aktivitet(data)
+        if feil:
+            flash(feil, "feil")
+            data["id"] = aktivitet_id
+            return render_template("aktivitet_form.html", aktivitet=data,
+                                   tittel="Rediger aktivitetsforslag")
+        conn.execute(
+            """UPDATE aktivitetsforslag
+               SET tittel = ?, beskrivelse = ?, passer_interesser = ?, meldingsmal = ?
+               WHERE id = ?""",
+            (data["tittel"], data["beskrivelse"], data["passer_interesser"],
+             data["meldingsmal"], aktivitet_id),
+        )
+        conn.commit()
+        flash(f"Oppdaterte «{data['tittel']}».", "ok")
+        return redirect(url_for("aktiviteter"))
+
+    return render_template("aktivitet_form.html", aktivitet=rad,
+                           tittel="Rediger aktivitetsforslag")
+
+
+@app.route("/aktiviteter/<int:aktivitet_id>/slett", methods=["POST"])
+def aktivitet_slett(aktivitet_id):
+    conn = db.get_db()
+    conn.execute("DELETE FROM aktivitetsforslag WHERE id = ?", (aktivitet_id,))
+    conn.commit()
+    flash("Slettet aktivitetsforslag.", "ok")
+    return redirect(url_for("aktiviteter"))
+
+
+def _les_aktivitet_skjema():
+    return {
+        "tittel": request.form.get("tittel", "").strip(),
+        "beskrivelse": request.form.get("beskrivelse", "").strip(),
+        "passer_interesser": request.form.get("passer_interesser", "").strip(),
+        "meldingsmal": request.form.get("meldingsmal", "").strip(),
+    }
+
+
+def _valider_aktivitet(data):
+    if not data["tittel"]:
+        return "Tittel er påkrevd."
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Forslag – matching mellom ledig dag, personer og aktiviteter
+# ---------------------------------------------------------------------------
+def _formater_dato(iso_dato):
+    """Gjør 2026-07-25 til «lørdag 25. juli 2026» (norsk)."""
+    ukedager = ["mandag", "tirsdag", "onsdag", "torsdag", "fredag",
+                "lørdag", "søndag"]
+    maaneder = ["januar", "februar", "mars", "april", "mai", "juni", "juli",
+                "august", "september", "oktober", "november", "desember"]
+    try:
+        d = datetime.strptime(iso_dato, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return iso_dato
+    return f"{ukedager[d.weekday()]} {d.day}. {maaneder[d.month - 1]} {d.year}"
+
+
+def lag_forslag(dag, personer, aktiviteter_rader, maks=6):
+    """Bygg forslagskort for en gitt ledig dag.
+
+    Hver person pares med aktiviteten som passer interessene deres best.
+    Kortene rangeres etter en kombinert score: lengst tid siden kontakt teller
+    mest, og overlapp i interesser gir et løft.
+    """
+    dato_tekst = _formater_dato(dag["dato"])
+    forslag = []
+
+    for p in personer:
+        p_tags = set(parse_tags(p["interesser"]))
+
+        # Finn aktiviteten med størst overlapp i interesser.
+        beste_akt = None
+        beste_overlapp = -1
+        felles_tags = []
+        for a in aktiviteter_rader:
+            a_tags = set(parse_tags(a["passer_interesser"]))
+            felles = p_tags & a_tags
+            if len(felles) > beste_overlapp:
+                beste_overlapp = len(felles)
+                beste_akt = a
+                felles_tags = sorted(felles)
+
+        if beste_akt is None:
+            continue  # ingen aktiviteter finnes enda
+
+        overlapp = max(beste_overlapp, 0)
+        dager = dager_siden(p["siste_kontakt_dato"])
+        # Aldri kontaktet rangeres helt øverst.
+        dager_score = 400 if dager is None else min(dager, 400)
+        score = dager_score + overlapp * 45
+
+        melding = fyll_melding(
+            beste_akt["meldingsmal"], navn=p["navn"], dato=dato_tekst,
+            aktivitet=beste_akt["tittel"], tidspunkt=dag["tidspunkt"],
+        )
+
+        forslag.append({
+            "person": p,
+            "aktivitet": beste_akt,
+            "overlapp": overlapp,
+            "felles_tags": felles_tags,
+            "dager_siden": dager,
+            "score": score,
+            "melding": melding,
+            "dato_tekst": dato_tekst,
+        })
+
+    forslag.sort(key=lambda f: (f["score"], f["overlapp"]), reverse=True)
+    return forslag[:maks]
+
+
+@app.route("/forslag")
+def forslag():
+    conn = db.get_db()
+    ledige = conn.execute(
+        """SELECT * FROM ledige_dager
+           WHERE status = 'ledig'
+           ORDER BY dato ASC, tidspunkt ASC"""
+    ).fetchall()
+    personer_rader = conn.execute("SELECT * FROM personer").fetchall()
+    aktiviteter_rader = conn.execute("SELECT * FROM aktivitetsforslag").fetchall()
+
+    valgt_id = request.args.get("dag_id", type=int)
+    valgt_dag = None
+    if valgt_id is not None:
+        for d in ledige:
+            if d["id"] == valgt_id:
+                valgt_dag = d
+                break
+    elif ledige:
+        valgt_dag = ledige[0]
+
+    kort = []
+    if valgt_dag is not None:
+        kort = lag_forslag(valgt_dag, personer_rader, aktiviteter_rader)
+
+    return render_template(
+        "forslag.html",
+        ledige=ledige,
+        valgt_dag=valgt_dag,
+        kort=kort,
+        dato_formatert=_formater_dato,
+        antall_personer=len(personer_rader),
+        antall_aktiviteter=len(aktiviteter_rader),
+    )
 
 
 if __name__ == "__main__":

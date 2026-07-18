@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block tittel %}Forslag · Hold kontakten{% endblock %}
+
+{% block innhold %}
+<div class="side-topp">
+    <h1>Forslag ✨</h1>
+</div>
+<p class="undertekst">Velg en ledig dag, så foreslår vi hvem du bør ta kontakt med og til hva.</p>
+
+{% if ledige %}
+<form method="get" class="dag-velger">
+    <label for="dag_id">Ledig dag:</label>
+    <select name="dag_id" id="dag_id" onchange="this.form.submit()">
+        {% for d in ledige %}
+        <option value="{{ d['id'] }}" {{ 'selected' if valgt_dag and valgt_dag['id'] == d['id'] }}>
+            {{ dato_formatert(d['dato']) }} · {{ d['tidspunkt'] }}
+        </option>
+        {% endfor %}
+    </select>
+    <noscript><button type="submit" class="knapp">Vis</button></noscript>
+</form>
+
+{% if antall_aktiviteter == 0 %}
+    <div class="tom">
+        <p>Du har ingen aktivitetsforslag enda – de trengs for å lage forslag.</p>
+        <a class="knapp" href="{{ url_for('aktivitet_ny') }}">Legg til et aktivitetsforslag</a>
+    </div>
+{% elif antall_personer == 0 %}
+    <div class="tom">
+        <p>Du har ingen personer enda.</p>
+        <a class="knapp" href="{{ url_for('person_ny') }}">Legg til en person</a>
+    </div>
+{% elif kort %}
+    <div class="kort-rutenett">
+        {% for f in kort %}
+        <article class="forslag-kort">
+            <div class="kort-topp">
+                <h3>Inviter <span class="uthev">{{ f['person']['navn'] }}</span>
+                    til <span class="uthev">{{ f['aktivitet']['tittel'] }}</span></h3>
+                <span class="merke merke-{{ f['person']['relasjon'] }}">{{ f['person']['relasjon'] }}</span>
+            </div>
+
+            <p class="kort-dato">📅 {{ f['dato_tekst'] }} · {{ valgt_dag['tidspunkt'] }}</p>
+
+            <div class="kort-meta">
+                {% if f['dager_siden'] is none %}
+                    <span class="badge badge-varsel">Aldri kontaktet</span>
+                {% else %}
+                    <span class="badge">{{ f['dager_siden'] }} dager siden kontakt</span>
+                {% endif %}
+                {% if f['felles_tags'] %}
+                    <span class="badge badge-match">Match:
+                        {% for tag in f['felles_tags'] %}{{ tag }}{{ ', ' if not loop.last }}{% endfor %}
+                    </span>
+                {% else %}
+                    <span class="badge badge-noytral">Ingen felles interesser</span>
+                {% endif %}
+            </div>
+
+            {% if f['aktivitet']['beskrivelse'] %}
+            <p class="kort-beskrivelse">{{ f['aktivitet']['beskrivelse'] }}</p>
+            {% endif %}
+
+            {% if f['melding'] %}
+            <div class="melding-boks">
+                <div class="melding-topp">Ferdig melding</div>
+                <p class="melding-tekst">{{ f['melding'] }}</p>
+            </div>
+            {% else %}
+            <p class="hint">Denne aktiviteten har ingen meldingsmal enda.</p>
+            {% endif %}
+        </article>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="tom"><p>Ingen forslag å vise for denne dagen.</p></div>
+{% endif %}
+
+{% else %}
+<div class="tom">
+    <p>Du har ingen ledige dager registrert enda.</p>
+    <a class="knapp" href="{{ url_for('dag_ny') }}">Legg inn en ledig dag</a>
+</div>
+{% endif %}
+{% endblock %}
